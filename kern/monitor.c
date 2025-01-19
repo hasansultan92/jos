@@ -11,7 +11,7 @@
 #include <kern/console.h>
 #include <kern/monitor.h>
 #include <kern/kdebug.h>
-
+#include <kern/consoleColors.h>
 #include <kern/hidden.h>
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
@@ -24,12 +24,18 @@ struct Command {
 	int (*func)(int argc, char** argv, struct Trapframe* tf);
 };
 
+int show(int argc, char **argv, struct Trapframe *tf) {
+	cprintf(BLUE("-----") " " RED("TEAM") " " GREEN("98") " " YELLOW("JOS") " " MAGENTA("!")" " BLUE("------") "\n");
+	return 0;
+}
+
 // LAB 1: add your command to here...
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
 	{ "hidden", "Run hidden test cases", exec_hidden_cases},
 	{ "backtrace", "Backtrace the stack", mon_backtrace},
+	{ "show", "fancy art on console", show},
 };
 
 /***** Implementations of basic kernel monitor commands *****/
