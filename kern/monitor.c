@@ -1,6 +1,7 @@
 // Simple command-line kernel monitor useful for
 // controlling the kernel and exploring the system interactively.
 
+#include "kdebug.h"
 #include <inc/stdio.h>
 #include <inc/string.h>
 #include <inc/memlayout.h>
@@ -28,6 +29,7 @@ static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
 	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
 	{ "hidden", "Run hidden test cases", exec_hidden_cases},
+	{ "backtrace", "Backtrace the stack", mon_backtrace},
 };
 
 /***** Implementations of basic kernel monitor commands *****/
@@ -64,6 +66,27 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 	// LAB 1: Your code here.
     // HINT 1: use read_ebp().
     // HINT 2: print the current ebp on the first line (not current_ebp[0])
+	cprintf("Stack backtrace:\n");
+	uint32_t *frame = (uint32_t *) read_ebp();
+	struct Eipdebuginfo info;
+	while (frame) {
+		uint32_t eip = frame[1];
+		cprintf("ebp %x eip %x args ", (uint32_t) frame, eip);
+		if (argc > 0) {
+			for(int i = 0; i < argc; i++){
+				cprintf("%08x ", frame[3 + i]);
+			}
+		}
+		else {
+			// What to do with no args
+			cprintf("%08x", 0);
+		}
+		debuginfo_eip(eip, &info);
+		cprintf("\n\t%s:%d: %s+%d\n", info.eip_file, info.eip_line, info.eip_fn_name, info.eip_fn_addr);
+		frame = (uint32_t *)frame[0];
+	}
+
+
 	return 0;
 }
 
