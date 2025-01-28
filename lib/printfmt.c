@@ -89,6 +89,7 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 	char padc;
 
 	while (1) {
+		// Going through the text
 		while ((ch = *(unsigned char *) fmt++) != '%') {
 			if (ch == '\0')
 				return;
@@ -206,9 +207,12 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 		// (unsigned) octal
 		case 'o':
 			// LAB 1: Replace this with your code.
-			putch('X', putdat);
-			putch('X', putdat);
-			putch('X', putdat);
+			num = getint(&ap, lflag);
+			base = 8;
+			goto number;
+			// putch('X', putdat);
+			// putch('X', putdat);
+			// putch('X', putdat);
 			break;
 
 		// pointer
