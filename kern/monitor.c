@@ -29,6 +29,11 @@ int show(int argc, char **argv, struct Trapframe *tf) {
 	return 0;
 }
 
+int exec_hidden_cases(int argc, char **argv, struct Trapframe *tf) {
+	hidden_test_cases();
+	return 0;
+}
+
 // LAB 1: add your command to here...
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
@@ -95,10 +100,6 @@ mon_backtrace(int argc, char **argv, struct Trapframe *tf)
 }
 
 
-int exec_hidden_cases(int argc, char **argv, struct Trapframe *tf) {
-	hidden_test_cases();
-	return 0;
-}
 /***** Kernel monitor command interpreter *****/
 
 #define WHITESPACE "\t\r\n "
