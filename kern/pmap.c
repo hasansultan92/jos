@@ -118,7 +118,7 @@ boot_alloc(uint32_t n)
 	// if nextfree > upper bound of available memory
 	uint32_t current_pages = PADDR((void *) (nextfree))/ PGSIZE;
 	if((PADDR((void *) (nextfree))/ PGSIZE)  >= npages){
-		panic("boot_alloc: Out of memory! Failed to allocate %u bytes", n);
+		panic("%s: Out of memory! Failed to allocate %u bytes", __func__, n);
 	}
 
 	return result;
@@ -190,7 +190,6 @@ mem_init(void)
 	// to initialize all fields of each struct PageInfo to 0.
 	// Your code goes here:
 	pages = boot_alloc(npages * sizeof(struct PageInfo));
-	// For loop here
 	memset(pages, 0, npages * sizeof(struct PageInfo));
 
 	//////////////////////////////////////////////////////////////////////
@@ -318,42 +317,25 @@ page_init(void)
 	// Change the code to reflect this.
 	// NB: DO NOT actually touch the physical memory corresponding to
 	// free pages!
+	cprintf("%s: Intializing pages\n", __func__);
 	size_t i;
-	// Point 1?
+	// Point 1
 	pages[0].pp_ref = 1;
 	pages[0].pp_link = NULL;
 	uint32_t * nextfree = boot_alloc(0);
 	for(i = 1; i < npages; i++){
-		// Point 2
-		if (i > PADDR(nextfree)/PGSIZE) { // convert here to physical addy
+		// Point 2 and 4
+		if (i > PADDR(nextfree)/PGSIZE || i < PGNUM(IOPHYSMEM)) {
 			pages[i].pp_ref = 0;
 			pages[i].pp_link = page_free_list;
 			page_free_list = &pages[i];
-		}
-		// Point 3
-		else if (i <= IOPHYSMEM && i >= EXTPHYSMEM) {
-			pages[i].pp_ref = 1;
-			pages[i].pp_link = NULL;
-		}
-		// Point 4
-		else if (i <= ULIM  && i >= KERNBASE){ // IOPHYSMEM
+		} 
+		else {
 			pages[i].pp_ref = 1;
 			pages[i].pp_link = NULL;
 		}
 	}
-	cprintf("%s Done Done\n", __func__);
-
-	// for (i = 0; i < npages; i++) {
-	// 	cprintf("%p\n", firstFreeAddyBootAlloc[i]);
-	// }
-	// page_free_list = NULL;
-	// for (i = 0; i < npages; i++) {
-	// 	if (pages[i].pp_ref == 0){
-	// 		pages[i].pp_link = page_free_list;
-	// 		page_free_list = &pages[i]; // assign the page into the free list
-	// 	}
-	// 	/* 		pages[i].pp_ref = 0; */
-	// }
+	cprintf("%s: Intializing complete\n", __func__);
 }
 
 //
