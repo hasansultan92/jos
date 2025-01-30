@@ -66,8 +66,7 @@ protcseg:
   
   # Set up the stack pointer and call into C.
   movl    $start, %esp
-  call bootmain
-
+  call bootmain # Exercise 5: POINT THAT CALLS 0x10000c (entry point into boot)
   # If bootmain returns (it shouldn't), loop.
 spin:
   jmp spin

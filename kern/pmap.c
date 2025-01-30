@@ -104,18 +104,24 @@ boot_alloc(uint32_t n)
 	// to a multiple of PGSIZE.
 	//
 	// LAB 2: Your code here.
-	result = nextfree;
-	if (n > 1){
-		// Recursive call?
-		nextfree = ROUNDUP(result + n, PGSIZE);
-		cprintf("%s: nextfree %p\n", __func__, nextfree);
-		return nextfree;
-	} else if (n == 0){
+	
+	// Case 0: n==0, just return addr of nextfree without allocating anything
+	if(n == 0){
 		return nextfree;
 	}
-	// how to check out of memory?
-	// if (nextfree >= KERNBASE + PGSIZE) END???? 
-	return NULL;
+
+	// Case 1: n > 0, allocate memory by updating nextfree & ensure alignment using ROUNDUP
+	result = nextfree; // set return to current value of nextfree before updating it
+	nextfree = ROUNDUP(nextfree + n, PGSIZE); // update nextfree to the next free address rounded up to nearest page size
+
+	// TODO: Case 2: Memory Management Check
+	// if nextfree > upper bound of available memory
+	uint32_t current_pages = PADDR((void *) (nextfree))/ PGSIZE;
+	if((PADDR((void *) (nextfree))/ PGSIZE)  >= npages){
+		panic("boot_alloc: Out of memory! Failed to allocate %u bytes", n);
+	}
+
+	return result;
 }
 
 // Set up a two-level page table:
@@ -137,6 +143,29 @@ mem_init(void)
 	i386_detect_memory();
 
 	// Remove this line when you're ready to test this function.
+	/*////////////////////////////////////////////////////////////////////
+
+	// TODO: TEST boot_alloc 0 page size
+	pde_t *kern_pgdir1 = (pde_t *) boot_alloc(0);
+	pde_t *kern_pgdir2 = (pde_t *) boot_alloc(0);
+	cprintf("TEST: boot_alloc(0) should return the same pointer on consecutive calls\n");
+	cprintf("pgdir1: %p\n", kern_pgdir1);
+	cprintf("pgdir2: %p\n", kern_pgdir2);
+	assert(kern_pgdir1 == kern_pgdir2 && "boot_alloc(0) should return the same pointer on consecutive calls.");
+
+	// TEST: boot_alloc valid page size
+	pde_t *kern_pgdir4 = (pde_t *) boot_alloc(1);
+	cprintf("allocate 1 page: %p\n", kern_pgdir4);
+	pde_t *kern_pgdir5 = (pde_t *) boot_alloc(2);
+	cprintf("allocate 2 page: %p\n", kern_pgdir5);
+
+	// TEST: boot_alloc invalid page size
+	pde_t *kern_pgdir7 = (pde_t *) boot_alloc(npages*PGSIZE);
+	cprintf("allocate npages: %p\n", kern_pgdir7);
+
+	////////////////////////////////////////////////////////////////////*/
+
+
 	//panic("mem_init: This function is not finished\n");
 	cprintf("Init page dir\n");
 	//////////////////////////////////////////////////////////////////////
