@@ -1,5 +1,7 @@
 /* See COPYRIGHT for copyright information. */
 
+#include "inc/memlayout.h"
+#include "inc/stdio.h"
 #include <inc/x86.h>
 #include <inc/mmu.h>
 #include <inc/error.h>
@@ -167,7 +169,7 @@ mem_init(void)
 
 
 	//panic("mem_init: This function is not finished\n");
-	cprintf("Init page dir\n");
+	cprintf("%s: entry\n", __func__);
 	//////////////////////////////////////////////////////////////////////
 	// create initial page directory.
 	kern_pgdir = (pde_t *) boot_alloc(PGSIZE);
@@ -354,7 +356,17 @@ struct PageInfo *
 page_alloc(int alloc_flags)
 {
 	// Fill this function in
-	return 0;
+	struct PageInfo * pp = page_free_list;
+	if (!pp) {
+		return NULL;
+	}
+	// I am just removing the head from the free list and bringing the head to the next link/node?
+	page_free_list = pp->pp_link;
+	pp->pp_link = NULL;
+	if (alloc_flags && ALLOC_ZERO){
+		memset(page2kva(pp), 0, PGSIZE);
+	}
+	return pp;
 }
 
 //
@@ -367,6 +379,13 @@ page_free(struct PageInfo *pp)
 	// Fill this function in
 	// Hint: You may want to panic if pp->pp_ref is nonzero or
 	// pp->pp_link is not NULL.
+	if (pp->pp_ref == 0) {
+		pp->pp_link = page_free_list;
+		page_free_list = pp;
+	}
+	else if (pp->pp_ref > 0 || pp->pp_link != NULL){
+		panic("%s: %p failed to free", __func__, pp);
+	}
 }
 
 //
