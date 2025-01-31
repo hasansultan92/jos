@@ -443,6 +443,15 @@ static void
 boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm)
 {
 	// Fill this function in
+	// I assume they will give random values to break this function
+	assert(pa % PGSIZE == 0);
+	assert(va % PGSIZE == 0);
+	assert(size % PGSIZE == 0); // Similar to 4096 / 4096
+	for (int i = 0, n = size / PGSIZE; i < n; i++) {
+		pte_t *pte = pgdir_walk(pgdir,(void*) (va + i * PGSIZE), 1);
+		assert(pte != NULL); // Not sure if we need this but something about pgdir is supposed to return null potentially
+		*pte = (pa + i * PGSIZE) | perm | PTE_P;
+	}
 }
 
 //
