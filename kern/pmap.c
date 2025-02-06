@@ -2,6 +2,7 @@
 
 #include "inc/memlayout.h"
 #include "inc/stdio.h"
+#include "inc/types.h"
 #include <inc/x86.h>
 #include <inc/mmu.h>
 #include <inc/error.h>
@@ -363,7 +364,7 @@ page_alloc(int alloc_flags)
 	// I am just removing the head from the free list and bringing the head to the next link/node?
 	page_free_list = pp->pp_link;
 	pp->pp_link = NULL;
-	if (alloc_flags && ALLOC_ZERO){
+	if (alloc_flags & ALLOC_ZERO){
 		memset(page2kva(pp), 0, PGSIZE);
 	}
 	return pp;
@@ -425,7 +426,22 @@ pte_t *
 pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
 	// Fill this function in
-	return NULL;
+	pde_t pde = pgdir[PDX(va)]; // Index from the directory where we know the index using va
+	if (!(pde & PTE_P) && create) {
+		// No page condition but we need to alloc
+		struct PageInfo * pageTablePage = page_alloc(ALLOC_ZERO);
+		if (!pageTablePage){
+			return NULL;
+		}
+		pageTablePage->pp_ref++;
+		pde = page2pa(pageTablePage) | PTE_P | PTE_W | PTE_U; // map that index to this struct or whatever
+		pgdir[PDX(va)] = pde; 
+		// Memset to clear it out?
+	}
+	pte_t PTEPointer = PTE_ADDR(pde);
+	physaddr_t physicalAddy = PTX(va) + PTEPointer;
+	pte_t * kernelVAAddress = (pte_t *) KADDR(physicalAddy);
+	return kernelVAAddress;
 }
 
 //
@@ -444,13 +460,10 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 {
 	// Fill this function in
 	// I assume they will give random values to break this function
-	assert(pa % PGSIZE == 0);
-	assert(va % PGSIZE == 0);
-	assert(size % PGSIZE == 0); // Similar to 4096 / 4096
-	for (int i = 0, n = size / PGSIZE; i < n; i++) {
-		pte_t *pte = pgdir_walk(pgdir,(void*) (va + i * PGSIZE), 1);
+	for (int i = 0, n = (size + PGSIZE - 1) / PGSIZE; i < n; i++) {
+		pte_t *pte = pgdir_walk(pgdir,(void*) (va + (i * PGSIZE)), 1);
 		assert(pte != NULL); // Not sure if we need this but something about pgdir is supposed to return null potentially
-		*pte = (pa + i * PGSIZE) | perm | PTE_P;
+		*pte = (pa + (i * PGSIZE)) | perm | PTE_P; // I believe this is the present bit we talked about in lectures
 	}
 }
 
@@ -483,6 +496,18 @@ int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
 	// Fill this function in
+	pte_t *pte = pgdir_walk(pgdir,(void*) va, 0);
+	if (pte == NULL){
+		return E_NO_MEM;
+	}
+	if (*pte & PTE_P){
+		page_remove(pgdir, va);
+	}
+	physaddr_t ppPhysicalAddy = page2pa(pp);
+	ppPhysicalAddy |= perm | PTE_P;
+	*pte = ppPhysicalAddy;
+	pp->pp_ref++;
+	tlb_invalidate(pgdir, va);
 	return 0;
 }
 
@@ -523,6 +548,17 @@ void
 page_remove(pde_t *pgdir, void *va)
 {
 	// Fill this function in
+	pte_t * pageLookUpPointer;
+	struct PageInfo * page = page_lookup(pgdir, va, &pageLookUpPointer);
+	if (*pageLookUpPointer == 0) {
+		return;
+	}
+	if (pageLookUpPointer != NULL){
+		*pageLookUpPointer = 0;
+	}
+	page->pp_ref--;
+	tlb_invalidate(pgdir, va);
+	return;
 }
 
 //
