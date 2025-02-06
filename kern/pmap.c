@@ -427,17 +427,25 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 {
 	// Fill this function in
 	pde_t pde = pgdir[PDX(va)]; // Index from the directory where we know the index using va
-	if (!(pde & PTE_P) && create) {
-		// No page condition but we need to alloc
-		struct PageInfo * pageTablePage = page_alloc(ALLOC_ZERO);
-		if (!pageTablePage){
+
+	// Check if the page table is already present
+	if (!(pde & PTE_P)){
+		if (create) {
+			// No page condition but we need to alloc
+			struct PageInfo * pageTablePage = page_alloc(ALLOC_ZERO);
+			if (!pageTablePage){
+				return NULL;
+			}
+			pageTablePage->pp_ref++;
+			pde = page2pa(pageTablePage) | PTE_P | PTE_W | PTE_U; // map that index to this struct or whatever
+			pgdir[PDX(va)] = pde; 
+			// Memset to clear it out?
+		}
+		else {
 			return NULL;
 		}
-		pageTablePage->pp_ref++;
-		pde = page2pa(pageTablePage) | PTE_P | PTE_W | PTE_U; // map that index to this struct or whatever
-		pgdir[PDX(va)] = pde; 
-		// Memset to clear it out?
 	}
+	
 	pte_t PTEPointer = PTE_ADDR(pde);
 	physaddr_t physicalAddy = PTX(va) + PTEPointer;
 	pte_t * kernelVAAddress = (pte_t *) KADDR(physicalAddy);
@@ -526,7 +534,23 @@ struct PageInfo *
 page_lookup(pde_t *pgdir, void *va, pte_t **pte_store)
 {
 	// Fill this function in
-	return NULL;
+
+	// Step 1: Find page table entry via pgdir_walk
+    pte_t *pte = pgdir_walk(pgdir, va, 0);
+    
+	// Case 0: Return NULL if there is no page mapped at va
+    if (pte == NULL || !(*pte & PTE_P)) {
+        return NULL;
+    }
+
+    // Case 1: pte_store is not zero, store addr of pte for this page in it
+	if (pte_store) {
+        *pte_store = pte;
+    }
+
+	// Step 2: Convert phys addr in PTE to PageInfo struct
+    return pa2page(PTE_ADDR(*pte));
+
 }
 
 //
@@ -548,7 +572,7 @@ void
 page_remove(pde_t *pgdir, void *va)
 {
 	// Fill this function in
-	pte_t * pageLookUpPointer;
+	pte_t * pageLookUpPointer = 0;
 	struct PageInfo * page = page_lookup(pgdir, va, &pageLookUpPointer);
 	if (*pageLookUpPointer == 0) {
 		return;
