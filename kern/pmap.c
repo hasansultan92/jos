@@ -220,8 +220,12 @@ mem_init(void)
 	//    - pages itself -- kernel RW, user NONE
 	// Your code goes here:
 
-	// TODO: CHECK THIS WITH TA
-	boot_map_region(kern_pgdir, UPAGES, PTSIZE, PADDR(pages), PTE_U);
+	// HASAN LOOK HERE:
+	size_t top_pages = ROUNDUP(sizeof(struct PageInfo)  * npages, PGSIZE);
+	// // MAKE 2 CALLS: (START HERE)
+	boot_map_region(kern_pgdir, UPAGES , top_pages, PADDR(pages), PTE_U);
+	// make the second call for the follow permissions:
+	// boot_map_region(kern_pgdir, PAGES , top_pages, PADDR(pages), (PTE_P | PTE_W));
 
 	// NOTES:
 	// PTSIZE: bytes mapped by a page directory entry
@@ -504,18 +508,23 @@ int
 page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 {
 	// Fill this function in
-	pte_t *pte = pgdir_walk(pgdir,(void*) va, 0);
-	if (pte == NULL){
-		return E_NO_MEM;
+
+	// Get the PTE and create a new page table if necessary
+	pte_t *pte = pgdir_walk(pgdir,(void*) va, 1);
+	if ((pte == NULL)){
+		return -E_NO_MEM;
 	}
+
+	// Increment reference count before removing an old mapping
+    pp->pp_ref++;
+
+	// Remove page if there was already a page mapped
 	if (*pte & PTE_P){
 		page_remove(pgdir, va);
 	}
-	physaddr_t ppPhysicalAddy = page2pa(pp);
-	ppPhysicalAddy |= perm | PTE_P;
-	*pte = ppPhysicalAddy;
-	pp->pp_ref++;
-	tlb_invalidate(pgdir, va);
+
+	// Map new page
+	*pte = page2pa(pp) | perm | PTE_P;
 	return 0;
 }
 
