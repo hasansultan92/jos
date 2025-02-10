@@ -220,13 +220,17 @@ mem_init(void)
 	//    - pages itself -- kernel RW, user NONE
 	// Your code goes here:
 
-	// HASAN LOOK HERE:
-	size_t top_pages = ROUNDUP(sizeof(struct PageInfo)  * npages, PGSIZE);
-	// // MAKE 2 CALLS: (START HERE)
-	boot_map_region(kern_pgdir, UPAGES , PTSIZE, PADDR(pages), (PTE_U | PTE_P));
-	// make the second call for the follow permissions:
-	boot_map_region(kern_pgdir, (uintptr_t) pages , top_pages, PADDR(pages), (PTE_P | PTE_W));
+	// TODO - HASAN LOOK HERE:
+	// Calculate the page region size
+	size_t page_region_size = ROUNDUP(sizeof(struct PageInfo)  * npages, PGSIZE);
 
+	// Map pages at UPAGES for user & kernel read
+	boot_map_region(kern_pgdir, UPAGES, page_region_size, PADDR(pages), PTE_U | PTE_P);
+
+	// Map pages at pages for kernel read/write, user none
+	boot_map_region(kern_pgdir, (uintptr_t)pages, page_region_size, PADDR(pages), PTE_P | PTE_W);
+
+	
 	// NOTES:
 	// PTSIZE: bytes mapped by a page directory entry
 	// PTE_U: Page table/directory entry flags [user]
@@ -244,6 +248,7 @@ mem_init(void)
 	// Your code goes here:
 
 	// TODO: CHECK THIS WITH TA
+	boot_map_region(kern_pgdir, KSTACKTOP - KSTKSIZE, KSTKSIZE, PADDR(bootstack), PTE_P | PTE_W);
 	boot_map_region(kern_pgdir, KSTACKTOP-KSTKSIZE, KSTKSIZE, PADDR(bootstack), (PTE_W | PTE_P));
 	
 	// NOTES:
@@ -455,6 +460,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 	physaddr_t physicalAddy = PTX(va) * sizeof(pte_t) + PTEPointer;
 	pte_t * kernelVAAddress = (pte_t *) KADDR(physicalAddy);
 	return kernelVAAddress;
+
 }
 
 //
