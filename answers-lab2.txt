@@ -37,6 +37,14 @@ What addresses do they map and where do they point? In other words, fill out thi
     |0    | 0x00000000           | Empty memory //TODO                      |
     +-----+----------------------+------------------------------------------+
 
+
+    // KERNBASE
+    // PAGES STRUCTURES
+    // BASED ON MEMLAYOUT
+    // pmap calls
+    // meminit
+    // bootmap calls
+
     b. We have placed the kernel and user environment in the same address space. 
     Why will user programs not be able to read or write the kernel’s memory? 
     What specific mechanisms protect the kernel memory?
@@ -70,15 +78,12 @@ What addresses do they map and where do they point? In other words, fill out thi
     d. How much space overhead is there for managing memory, if we actually had the maximum amount 
     of physical memory? How is this overhead broken down?
     
-    // TODO: SCALE TO 256
     The memory management overhead is approximately 4.004MB. 
     
     Below is how we calculated & brokedown the memory management overhead:
-
     Page Directory: 1024 entries * 4B = 4KB
     Page Tables: 1024 tables * (1024 entries * 4B) = 4MB
     Total Overhead: Page Directory + Page Tables = 4KB + 4MB = 4.004MB
-
 
     Thus, the overhead is composed of the page directory & page tables, which are used to to manage and map 
     virtual-to-pyhsical memory.
@@ -87,3 +92,5 @@ What addresses do they map and where do they point? In other words, fill out thi
     EIP is still a low number (a little over 1MB). At what point do we transition to running at an EIP above 
     KERNBASE? What makes it possible for us to continue executing at a low EIP between when we enable paging 
     and when we begin running at an EIP above KERNBASE? Why is this transition necessary?
+
+    // answer is somewhere in the doc probably 
