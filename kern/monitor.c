@@ -1,6 +1,8 @@
 // Simple command-line kernel monitor useful for
 // controlling the kernel and exploring the system interactively.
 
+#include "inc/mmu.h"
+#include "inc/types.h"
 #include "kdebug.h"
 #include <inc/stdio.h>
 #include <inc/string.h>
@@ -34,6 +36,61 @@ int exec_hidden_cases(int argc, char **argv, struct Trapframe *tf) {
 	return 0;
 }
 
+int get_permission_flag(const char *perm_str) {
+    if (strcmp(perm_str, "PTE_U") == 0) return PTE_U;
+    if (strcmp(perm_str, "PTE_W") == 0) return PTE_W;
+    if (strcmp(perm_str, "PTE_P") == 0) return PTE_P;
+    if (strcmp(perm_str, "PTE_AVAIL") == 0) return PTE_AVAIL;
+    return -1; // Invalid permission
+}
+
+int setPerm(int argc, char ** argv, struct Trapframe *tf){
+	if (argc < 3){
+		cprintf("%s: Usage: setperm <va> <perm>\n", __func__);
+		return 1;
+	}
+
+    uintptr_t virtualAddy = strtol(argv[1], NULL, 16);
+    int perm = get_permission_flag(argv[2]); // I assume cause they are numbers in the macros
+	cprintf("%s: %d\n", __func__, perm);
+	pte_t *pte = pgdir_walk(kern_pgdir, (void *)virtualAddy, 0);
+    if (!pte || !(*pte & PTE_P)) {
+        cprintf("%s: Virtual address %08x not mapped\n", virtualAddy);
+        return 1;
+    }
+
+	*pte = (*pte & ~PTE_SYSCALL) | perm | PTE_P;
+	invlpg((void *)virtualAddy);
+	cprintf("%s: Updated permissions for %p to %x\n", __func__, virtualAddy, perm);
+
+	return 0;
+}
+
+int PAMapShow(int argc, char **argv, struct Trapframe *tf){
+	// Convert tf to ptr
+	if (argc < 3){
+		cprintf("%s: Usage: showmappings <start_va> <end_va>\n", __func__);
+		return 1;
+	}
+	uintptr_t first = strtol(argv[1], NULL, 0);
+	uintptr_t second = strtol(argv[2], NULL, 0);
+
+	for(uintptr_t virtualAddy = ROUNDDOWN(first, PGSIZE); virtualAddy <= second; virtualAddy += PGSIZE){
+		pte_t * pte = pgdir_walk(kern_pgdir, (void *) virtualAddy, 0);
+        if (!pte || !(*pte & PTE_P)) {
+            cprintf("%s VA: %08x -> Not mapped\n", __func__, virtualAddy);
+        } else {
+            cprintf("%s VA: %08x -> PA: %08x | Permissions: %c%c%c\n",
+                __func__,
+				virtualAddy,
+                PTE_ADDR(*pte),
+                (*pte & PTE_W) ? 'W' : '-',
+                (*pte & PTE_U) ? 'U' : '-',
+                (*pte & PTE_P) ? 'P' : '-');
+        }
+	}
+	return 0;
+}
 // LAB 1: add your command to here...
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
@@ -41,6 +98,8 @@ static struct Command commands[] = {
 	{ "hidden", "Run hidden test cases", exec_hidden_cases},
 	{ "backtrace", "Backtrace the stack", mon_backtrace},
 	{ "show", "fancy art on console", show},
+	{"showmapping","display physical page address mappings", PAMapShow},
+	{"setpermission", "change permissions at addresses",setPerm}
 };
 
 /***** Implementations of basic kernel monitor commands *****/

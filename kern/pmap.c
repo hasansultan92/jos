@@ -223,9 +223,9 @@ mem_init(void)
 	// HASAN LOOK HERE:
 	size_t top_pages = ROUNDUP(sizeof(struct PageInfo)  * npages, PGSIZE);
 	// // MAKE 2 CALLS: (START HERE)
-	boot_map_region(kern_pgdir, UPAGES , top_pages, PADDR(pages), PTE_U);
+	boot_map_region(kern_pgdir, UPAGES , PTSIZE, PADDR(pages), (PTE_U | PTE_P));
 	// make the second call for the follow permissions:
-	// boot_map_region(kern_pgdir, PAGES , top_pages, PADDR(pages), (PTE_P | PTE_W));
+	boot_map_region(kern_pgdir, (uintptr_t) pages , top_pages, PADDR(pages), (PTE_P | PTE_W));
 
 	// NOTES:
 	// PTSIZE: bytes mapped by a page directory entry
@@ -244,7 +244,7 @@ mem_init(void)
 	// Your code goes here:
 
 	// TODO: CHECK THIS WITH TA
-	boot_map_region(kern_pgdir, KSTACKTOP-KSTKSIZE, KSTKSIZE, PADDR(bootstack), PTE_W);
+	boot_map_region(kern_pgdir, KSTACKTOP-KSTKSIZE, KSTKSIZE, PADDR(bootstack), (PTE_W | PTE_P));
 	
 	// NOTES:
 	// PTE_W: Page table/directory entry flags [writeable]
@@ -259,7 +259,7 @@ mem_init(void)
 	// Your code goes here:
 
 	// TODO: CHECK THIS WITH TA
-	boot_map_region(kern_pgdir, KERNBASE, 0-KERNBASE, 0, PTE_W);
+	boot_map_region(kern_pgdir, KERNBASE, 0xFFFFFFFF-KERNBASE, 0, (PTE_W | PTE_P));
 
 	// NOTES:
 	// PTE_W: Page table/directory entry flags [writeable]
@@ -332,7 +332,7 @@ page_init(void)
 	uint32_t * nextfree = boot_alloc(0);
 	for(i = 1; i < npages; i++){
 		// Point 2 and 4
-		if (i > PADDR(nextfree)/PGSIZE || i < PGNUM(IOPHYSMEM)) {
+		if (i >= PADDR(nextfree)/PGSIZE || i < PGNUM(IOPHYSMEM)) {
 			pages[i].pp_ref = 0;
 			pages[i].pp_link = page_free_list;
 			page_free_list = &pages[i];
@@ -363,6 +363,7 @@ page_alloc(int alloc_flags)
 	// Fill this function in
 	struct PageInfo * pp = page_free_list;
 	if (!pp) {
+		//panic("Could not find the page_free_list");
 		return NULL;
 	}
 	// I am just removing the head from the free list and bringing the head to the next link/node?
@@ -383,7 +384,7 @@ page_free(struct PageInfo *pp)
 {
 	// Fill this function in
 	// Hint: You may want to panic if pp->pp_ref is nonzero or
-	// pp->pp_link is not NULL.
+	// pp->pp_link is not NULL.    
 	if (pp->pp_ref == 0) {
 		pp->pp_link = page_free_list;
 		page_free_list = pp;
@@ -451,7 +452,7 @@ pgdir_walk(pde_t *pgdir, const void *va, int create)
 	}
 	
 	pte_t PTEPointer = PTE_ADDR(pde);
-	physaddr_t physicalAddy = PTX(va) + PTEPointer;
+	physaddr_t physicalAddy = PTX(va) * sizeof(pte_t) + PTEPointer;
 	pte_t * kernelVAAddress = (pte_t *) KADDR(physicalAddy);
 	return kernelVAAddress;
 }
@@ -472,9 +473,12 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 {
 	// Fill this function in
 	// I assume they will give random values to break this function
+	cprintf("%s: %p\n", __func__, va);
 	for (int i = 0, n = (size + PGSIZE - 1) / PGSIZE; i < n; i++) {
 		pte_t *pte = pgdir_walk(pgdir,(void*) (va + (i * PGSIZE)), 1);
-		assert(pte != NULL); // Not sure if we need this but something about pgdir is supposed to return null potentially
+		if (pte == NULL){
+			panic("Lol we are out of memory");
+		}
 		*pte = (pa + (i * PGSIZE)) | perm | PTE_P; // I believe this is the present bit we talked about in lectures
 	}
 }
@@ -510,21 +514,31 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 	// Fill this function in
 
 	// Get the PTE and create a new page table if necessary
+	cprintf("Mapping va %p to pa %p\n", va, page2pa(pp));
 	pte_t *pte = pgdir_walk(pgdir,(void*) va, 1);
-	if ((pte == NULL)){
+	if (pte == NULL){
+		cprintf("%s: failed at va: %p\n", __func__, va);
 		return -E_NO_MEM;
 	}
 
-	// Increment reference count before removing an old mapping
-    pp->pp_ref++;
-
+	if (PTE_ADDR(*pte) == page2pa(pp)) {
+			if ((*pte & 0x1ff) == perm) {
+					return 0;
+			}
+			*pte = page2pa(pp) | perm | PTE_P;
+			tlb_invalidate(pgdir, va);
+			return 0;
+	}
 	// Remove page if there was already a page mapped
 	if (*pte & PTE_P){
 		page_remove(pgdir, va);
 	}
 
 	// Map new page
+    pp->pp_ref++;
 	*pte = page2pa(pp) | perm | PTE_P;
+	cprintf("Mapped PTE %p: %08x\n", pte, *pte);
+
 	return 0;
 }
 
@@ -581,17 +595,14 @@ void
 page_remove(pde_t *pgdir, void *va)
 {
 	// Fill this function in
-	pte_t * pageLookUpPointer = 0;
-	struct PageInfo * page = page_lookup(pgdir, va, &pageLookUpPointer);
-	if (*pageLookUpPointer == 0) {
-		return;
+	pte_t *pte_store = NULL;
+	struct PageInfo *pp = page_lookup(pgdir, va, &pte_store);
+	if (!pp) {
+			return;
 	}
-	if (pageLookUpPointer != NULL){
-		*pageLookUpPointer = 0;
-	}
-	page->pp_ref--;
+	*pte_store = 0;
+	page_decref(pp);
 	tlb_invalidate(pgdir, va);
-	return;
 }
 
 //
@@ -862,9 +873,10 @@ check_page(void)
 	assert(check_va2pa(kern_pgdir, 0x0) == page2pa(pp1));
 	assert(pp1->pp_ref == 1);
 	assert(pp0->pp_ref == 1);
-
+	//int returnVal = page_insert(kern_pgdir, pp2, (void*) PGSIZE, PTE_W);
 	// should be able to map pp2 at PGSIZE because pp0 is already allocated for page table
 	assert(page_insert(kern_pgdir, pp2, (void*) PGSIZE, PTE_W) == 0);
+	cprintf("%s: pp: %p checkva2pa: %p PGSIZE: %d page2pa: %p\n", __func__, pp2, check_va2pa(kern_pgdir, PGSIZE), PGSIZE, page2pa(pp2));
 	assert(check_va2pa(kern_pgdir, PGSIZE) == page2pa(pp2));
 	assert(pp2->pp_ref == 1);
 
