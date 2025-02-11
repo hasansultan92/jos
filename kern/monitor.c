@@ -66,10 +66,10 @@ int setPerm(int argc, char ** argv, struct Trapframe *tf){
 	return 0;
 }
 
-int PAMapShow(int argc, char **argv, struct Trapframe *tf){
+int MemMap(int argc, char **argv, struct Trapframe *tf){
 	// Convert tf to ptr
 	if (argc < 3){
-		cprintf("%s: Usage: showmappings <start_va> <end_va>\n", __func__);
+		cprintf("%s: Usage: showmapping <start_va> <end_va>\n", __func__);
 		return 1;
 	}
 	uintptr_t first = strtol(argv[1], NULL, 0);
@@ -91,6 +91,37 @@ int PAMapShow(int argc, char **argv, struct Trapframe *tf){
 	}
 	return 0;
 }
+
+int MemDump(int argc, char **argv, struct Trapframe *tf){
+	// Convert tf to ptr
+	if (argc < 3){
+		cprintf("%s: Usage: memdump <start_va> <end_va>\n", __func__);
+		return 1;
+	}
+	uintptr_t first = strtol(argv[1], NULL, 0);
+	uintptr_t second = strtol(argv[2], NULL, 0);
+	if (first >= second){
+		cprintf("%s: Invalid! start_va > end_va\n", __func__);
+		return 1;
+	}
+
+	if ((uint32_t)first > KERNBASE && (uint32_t) second > KERNBASE) {
+		// We are using physical address
+		cprintf("%s: recognized physical address\n", __func__);
+		first = (uintptr_t) KADDR(first);
+		second = (uintptr_t) KADDR(second);
+		cprintf("%s: recognized physical address %x %x\n", __func__, first, second);
+
+	}
+    for (uintptr_t virtualAddress = first; virtualAddress <= second; virtualAddress++) {
+        if (virtualAddress % 16 == 0) {
+            cprintf("\n%s: %08x: ", __func__, virtualAddress);
+        }
+        cprintf("%02x ", *(unsigned char *)virtualAddress);
+    }
+    cprintf("\n");
+	return 0;
+}
 // LAB 1: add your command to here...
 static struct Command commands[] = {
 	{ "help", "Display this list of commands", mon_help },
@@ -98,8 +129,10 @@ static struct Command commands[] = {
 	{ "hidden", "Run hidden test cases", exec_hidden_cases},
 	{ "backtrace", "Backtrace the stack", mon_backtrace},
 	{ "show", "fancy art on console", show},
-	{"showmapping","display physical page address mappings", PAMapShow},
-	{"setpermission", "change permissions at addresses",setPerm}
+	{"showmapping","display physical page address mappings", MemMap},
+	{"setpermission", "change permissions at addresses",setPerm},
+	{"memdump","display contents for 16 bytes", MemDump},
+
 };
 
 /***** Implementations of basic kernel monitor commands *****/
