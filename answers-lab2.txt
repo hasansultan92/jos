@@ -15,35 +15,27 @@ Answer: uintptr_t
 ******************************************************************************
 Exercise 5
 
-a. What entries (rows) in the page directory have been filled in at this point? 
-What addresses do they map and where do they point? In other words, fill out this table as much as possible:
-    +-----+----------------------+------------------------------------------+
-    |Entry| Base Virtual Address |  Points to (logically)                   |
-    +=====+======================+==========================================+
-    |1023 | 0xFFC00000           | Page table for top 4MB of phys memory    |
-    +-----+----------------------+------------------------------------------+
-    |1022 | 0xFFC80000           | ?                                        |
-    +-----+----------------------+------------------------------------------+
-    |.    | ?                    | ?                                        |
-    +-----+----------------------+------------------------------------------+
-    |.    | ?                    | ?                                        |
-    +-----+----------------------+------------------------------------------+
-    |.    | ?                    | ?                                        |
-    +-----+----------------------+------------------------------------------+
-    |2    | 0x00800000           | Page table mapping 2nd 4MB of memory     |                                     
-    +-----+----------------------+------------------------------------------+
-    |1    | 0x00400000           | Page table mapping 1st 4MB after kernel  |                                     
-    +-----+----------------------+------------------------------------------+
-    |0    | 0x00000000           | Empty memory //TODO                      |
-    +-----+----------------------+------------------------------------------+
-
-
-    // KERNBASE
-    // PAGES STRUCTURES
-    // BASED ON MEMLAYOUT
-    // pmap calls
-    // meminit
-    // bootmap calls
+    a. What entries (rows) in the page directory have been filled in at this point? 
+    What addresses do they map and where do they point? In other words, fill out this table as much as possible:
+    +-----+----------------------+----------------------------------------------+
+    |Entry| Base Virtual Address |  Points to (logically)                       |
+    +=====+======================+==============================================+
+    |1023 | 0xffc00000           | Page table for top 4MB of phys memory        |
+    +-----+----------------------+----------------------------------------------+
+    |1022 | 0xff800000           | Page table for 2nd topmost 4MB of phys memory|
+    +-----+----------------------+----------------------------------------------+
+    |0x3bd| 0xef7ff000           | Bottom of Cur. Page Table (User R-)          |
+    +-----+----------------------+----------------------------------------------+
+    |0x3c0| 0xf0000000           | KERNBASE                                     |
+    +-----+----------------------+----------------------------------------------+
+    |0x3bc| 0xef000000           | UPAGES                                       |
+    +-----+----------------------+----------------------------------------------+
+    |2    | 0x00800000           | Empty Memory (*)                             |                                     
+    +-----+----------------------+----------------------------------------------+
+    |1    | 0x00400000           | UTEXT                                        |                                     
+    +-----+----------------------+----------------------------------------------+
+    |0    | 0x00000000           | Empty memory //TODO                          |
+    +-----+----------------------+----------------------------------------------+
 
     b. We have placed the kernel and user environment in the same address space. 
     Why will user programs not be able to read or write the kernel’s memory? 
@@ -93,4 +85,12 @@ What addresses do they map and where do they point? In other words, fill out thi
     KERNBASE? What makes it possible for us to continue executing at a low EIP between when we enable paging 
     and when we begin running at an EIP above KERNBASE? Why is this transition necessary?
 
-    // answer is somewhere in the doc probably 
+    // TODO
+
+    We transition to to running at an EIP above KERNBASE on line 67 of entry.s, 
+    the instructions: "mov	$relocated, %eax" and "jmp	*%eax". 
+
+    __ makes it possible for us to continue executing at a low EIP between when we enable paging 
+    and when we begin running at an EIP above KERNBASE. 
+
+    This transition is necessary because ___ .
