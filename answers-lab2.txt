@@ -74,8 +74,8 @@ Exercise 5
     
     Below is how we calculated & brokedown the memory management overhead:
     Page Directory: 1024 entries * 4B = 4KB
-    Page Tables: 1024 tables * (1024 entries * 4B) = 4MB
-    Total Overhead: Page Directory + Page Tables = 4KB + 4MB = 4.004MB
+    Page Tables: 1024 entries * 4B = 4KB
+    Total Overhead: Page Directory + Page Tables = 4KB + 4KB = 8 KB
 
     Thus, the overhead is composed of the page directory & page tables, which are used to to manage and map 
     virtual-to-pyhsical memory.
@@ -87,10 +87,14 @@ Exercise 5
 
     // TODO
 
-    We transition to to running at an EIP above KERNBASE on line 67 of entry.s, 
-    the instructions: "mov	$relocated, %eax" and "jmp	*%eax". 
 
-    __ makes it possible for us to continue executing at a low EIP between when we enable paging 
-    and when we begin running at an EIP above KERNBASE. 
+    We transition to to running at an EIP above KERNBASE after paging is enabled. This is occurs on line 67 of entry.s, 
+    in the instructions: "mov	$relocated, %eax" and "jmp	*%eax". 
 
-    This transition is necessary because ___ .
+    It is possible to continue executing at a low EIP between when we enable paging and when we begin running at an 
+    EIP above KERNBASE beacuse the initial page table identity maps the lower physical memory. 
+    In other words, there is a one-to-one mapping of virtual adresses to physical adresses in the first 4MB.
+
+    This transition is necessary because the kernel is designed to run in the address space wbove KERNBASE, ensuring 
+    seperation between kernel and user space. Running in the higher half prevents conflicts with user programs, simplifies
+    memory management and mapping, and isolates the kernel space from user porcesses.
