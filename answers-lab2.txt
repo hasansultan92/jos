@@ -85,9 +85,6 @@ Exercise 5
     KERNBASE? What makes it possible for us to continue executing at a low EIP between when we enable paging 
     and when we begin running at an EIP above KERNBASE? Why is this transition necessary?
 
-    // TODO
-
-
     We transition to to running at an EIP above KERNBASE after paging is enabled. This is occurs on line 67 of entry.s, 
     in the instructions: "mov	$relocated, %eax" and "jmp	*%eax". 
 
