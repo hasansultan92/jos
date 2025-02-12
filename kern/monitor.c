@@ -36,6 +36,25 @@ int exec_hidden_cases(int argc, char **argv, struct Trapframe *tf) {
 	return 0;
 }
 
+// LAB 1: add your command to here...
+static struct Command commands[] = {
+	{ "help", "Display this list of commands", mon_help },
+	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
+	{ "hidden", "Run hidden test cases", exec_hidden_cases},
+	{ "backtrace", "Backtrace the stack", mon_backtrace},
+	{ "show", "fancy art on console", show},
+	{"clear", "clear terminal screen",clear},
+	{"memmap","display physical page address mappings", memmap},
+	{"setpermission", "change permissions at addresses",setPerm},
+	{"memdump","isplay memory contents in 16-byte chunks within the specified address range", memdump},
+};
+
+int clear(int argc, char **argv, struct Trapframe *tf) {
+	cprintf("\x1b[2J\x1b[H"); // Found on the internet, QEMU supports this, fun.
+	return 0;
+}
+
+
 int get_permission_flag(const char *perm_str) {
     if (strcmp(perm_str, "PTE_U") == 0) return PTE_U;
     if (strcmp(perm_str, "PTE_W") == 0) return PTE_W;
@@ -51,7 +70,7 @@ int setPerm(int argc, char ** argv, struct Trapframe *tf){
 	}
 
     uintptr_t virtualAddy = strtol(argv[1], NULL, 16);
-    int perm = get_permission_flag(argv[2]); // I assume cause they are numbers in the macros
+    int perm = get_permission_flag(argv[2]); // Looks mwuah
 	cprintf("%s: %d\n", __func__, perm);
 	pte_t *pte = pgdir_walk(kern_pgdir, (void *)virtualAddy, 0);
     if (!pte || !(*pte & PTE_P)) {
@@ -66,7 +85,7 @@ int setPerm(int argc, char ** argv, struct Trapframe *tf){
 	return 0;
 }
 
-int MemMap(int argc, char **argv, struct Trapframe *tf){
+int memmap(int argc, char **argv, struct Trapframe *tf){
 	// Convert tf to ptr
 	if (argc < 3){
 		cprintf("%s: Usage: showmapping <start_va> <end_va>\n", __func__);
@@ -78,9 +97,9 @@ int MemMap(int argc, char **argv, struct Trapframe *tf){
 	for(uintptr_t virtualAddy = ROUNDDOWN(first, PGSIZE); virtualAddy <= second; virtualAddy += PGSIZE){
 		pte_t * pte = pgdir_walk(kern_pgdir, (void *) virtualAddy, 0);
         if (!pte || !(*pte & PTE_P)) {
-            cprintf("%s VA: %08x -> Not mapped\n", __func__, virtualAddy);
+            cprintf("%s: VA: %08x -> Not mapped\n", __func__, virtualAddy);
         } else {
-            cprintf("%s VA: %08x -> PA: %08x | Permissions: %c%c%c\n",
+            cprintf("%s: VA: %08x -> PA: %08x | Permissions: %c%c%c\n",
                 __func__,
 				virtualAddy,
                 PTE_ADDR(*pte),
@@ -92,49 +111,46 @@ int MemMap(int argc, char **argv, struct Trapframe *tf){
 	return 0;
 }
 
-int MemDump(int argc, char **argv, struct Trapframe *tf){
-	// Convert tf to ptr
-	if (argc < 3){
-		cprintf("%s: Usage: memdump <start_va> <end_va>\n", __func__);
-		return 1;
-	}
-	uintptr_t first = strtol(argv[1], NULL, 0);
-	uintptr_t second = strtol(argv[2], NULL, 0);
-	if (first >= second){
-		cprintf("%s: Invalid! start_va > end_va\n", __func__);
-		return 1;
-	}
+int memdump(int argc, char **argv, struct Trapframe *tf) {
+    if (argc < 4) {
+        cprintf("%s: Usage: memdump <start_va> <end_va> 'PA|VA'\n", __func__);
+        return 1;
+    }
 
-	if ((uint32_t)first > KERNBASE && (uint32_t) second > KERNBASE) {
-		// We are using physical address
-		cprintf("%s: recognized physical address\n", __func__);
-		first = (uintptr_t) KADDR(first);
-		second = (uintptr_t) KADDR(second);
-		cprintf("%s: recognized physical address %x %x\n", __func__, first, second);
+    uintptr_t first = strtol(argv[1], NULL, 0);
+    uintptr_t second = strtol(argv[2], NULL, 0);
+    bool isPhysical = (strcmp(argv[3], "PA") == 0);
 
-	}
-    for (uintptr_t virtualAddress = first; virtualAddress <= second; virtualAddress++) {
-        if (virtualAddress % 16 == 0) {
-            cprintf("\n%s: %08x: ", __func__, virtualAddress);
+    if (first >= second) {
+        cprintf("%s: Invalid! start_va > end_va\n", __func__);
+        return 1;
+    }
+
+    for (uintptr_t virtualAddy = first; virtualAddy <= second; virtualAddy++) {
+        if (virtualAddy % 16 == 0) {
+            cprintf("\n%s: %08x: ", __func__, virtualAddy);
         }
-        cprintf("%02x ", *(unsigned char *)virtualAddress);
+
+        unsigned char *memContent; // NEded reset
+
+        if (!isPhysical) {
+			// virtual addy
+            pte_t *pte = pgdir_walk(kern_pgdir, (void *)virtualAddy, 0);
+            if (pte && (*pte & PTE_P)) {
+                memContent = (unsigned char *)KADDR(*pte);
+            } else {
+                cprintf("?? ");
+                continue;
+            }
+        } else {
+			// phys addy edition
+            memContent = (unsigned char *)KADDR(virtualAddy);
+        }
+        cprintf("%02x ", *memContent);
     }
     cprintf("\n");
-	return 0;
+    return 0;
 }
-// LAB 1: add your command to here...
-static struct Command commands[] = {
-	{ "help", "Display this list of commands", mon_help },
-	{ "kerninfo", "Display information about the kernel", mon_kerninfo },
-	{ "hidden", "Run hidden test cases", exec_hidden_cases},
-	{ "backtrace", "Backtrace the stack", mon_backtrace},
-	{ "show", "fancy art on console", show},
-	{"showmapping","display physical page address mappings", MemMap},
-	{"setpermission", "change permissions at addresses",setPerm},
-	{"memdump","display contents for 16 bytes", MemDump},
-
-};
-
 /***** Implementations of basic kernel monitor commands *****/
 
 int
@@ -243,10 +259,11 @@ monitor(struct Trapframe *tf)
 
 	cprintf("Welcome to the JOS kernel monitor!\n");
 	cprintf("Type 'help' for a list of commands.\n");
+	cprintf("****** Now supporting clear! ******\n");
 
 
 	while (1) {
-		buf = readline("K> ");
+		buf = readline("98-469> ");
 		if (buf != NULL)
 			if (runcmd(buf, tf) < 0)
 				break;
