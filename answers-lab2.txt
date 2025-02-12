@@ -1,5 +1,4 @@
 Lab 2
-Team 98
 
 ******************************************************************************
 Exercise 3
@@ -42,13 +41,13 @@ Exercise 5
     What specific mechanisms protect the kernel memory?
 
     User programs will not be able to read or write the kernel’s memory due to privilege levels
-    and page table protections. The x86 architecture uses ring protection to restrict access
-    to system reources and divide execution privileges into four levels. With this setup, 
-    the kernel operates at ring 0 (highest privilege), while user programs run at ring 3 
-    (lowest privilege). Additionally, page table permissions enforce ensure that only ring 0 
-    (kernel mode) can access kernel pages by setting the User/Supervisor bit set to 0. 
-    The combination of ring protection and page table restrictions effectively isolates the 
-    kernel from user programs, which prevents unauthorized access to critical system memory.
+    and page table protections. The x86 architecture restricts access to system reources and 
+    via ring protection. Execution privileges are divided into four levels. With this setup, 
+    the kernel runs at ring 0 (highest privilege), while user programs run at ring 3 
+    (lowest privilege). Additionally, page table permissions limit access to kernel pages 
+    to only ring 0 (kernel mode). This is done by setting the User/Supervisor bit to 0. 
+    Privelege levels and page table protections isolate the kernel from user programs and 
+    prevent unauthorized memory access.
 
     c. What is the maximum amount of physical memory that this operating system can support? Why?
     
@@ -70,7 +69,7 @@ Exercise 5
     d. How much space overhead is there for managing memory, if we actually had the maximum amount 
     of physical memory? How is this overhead broken down?
     
-    The memory management overhead is approximately 4.004MB. 
+    The memory management overhead is approximately 8KB. 
     
     Below is how we calculated & brokedown the memory management overhead:
     Page Directory: 1024 entries * 4B = 4KB
@@ -86,12 +85,12 @@ Exercise 5
     and when we begin running at an EIP above KERNBASE? Why is this transition necessary?
 
     We transition to to running at an EIP above KERNBASE after paging is enabled. This is occurs on line 67 of entry.s, 
-    in the instructions: "mov	$relocated, %eax" and "jmp	*%eax". 
+    in the instructions: "mov $relocated, %eax" and "jmp *%eax". 
 
     It is possible to continue executing at a low EIP between when we enable paging and when we begin running at an 
     EIP above KERNBASE beacuse the initial page table identity maps the lower physical memory. 
     In other words, there is a one-to-one mapping of virtual adresses to physical adresses in the first 4MB.
 
-    This transition is necessary because the kernel is designed to run in the address space wbove KERNBASE, ensuring 
-    seperation between kernel and user space. Running in the higher half prevents conflicts with user programs, simplifies
-    memory management and mapping, and isolates the kernel space from user porcesses.
+    This transition is necessary because the kernel runs in the address space above KERNBASE. This ensures the 
+    seperation between kernel and user space. Running in the upper half prevents conflicts with user programs, 
+    makes memory management and mapping simpler, and isolates the kernel space from user processes.
