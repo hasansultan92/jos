@@ -25,8 +25,4 @@ def test_check_kern_pgdir():
 def test_check_page_installed_pgdir():
     r.match(r"check_page_installed_pgdir\(\) succeeded!")
 
-@test(10, "Hidden", parent=test_jos)
-def test_hidden_testcases():
-    r.match(r"Hidden memory management checks passed!")
-
 run_tests()

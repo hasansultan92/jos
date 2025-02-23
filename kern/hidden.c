@@ -1,9 +1,11 @@
+#include <kern/env.h>
 #include <kern/hidden.h>
 
-void 
-hidden_test_cases(void)
-{
-    cprintf("Running hidden test cases!\n");
+
+bool hidden_test_cases() {
+    cprintf("Running a Hidden Test Case\n");
     // Redacted
-    cprintf("Hidden memory management checks passed!\n");
+    cprintf("Hidden Test Cases Passed!\n");
+    return 1;
 }
+
