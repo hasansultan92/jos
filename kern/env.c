@@ -1,5 +1,9 @@
 /* See COPYRIGHT for copyright information. */
 
+#include "inc/env.h"
+#include "inc/memlayout.h"
+#include "inc/stdio.h"
+#include "inc/types.h"
 #include <inc/x86.h>
 #include <inc/mmu.h>
 #include <inc/error.h>
@@ -116,9 +120,21 @@ env_init(void)
 {
 	// Set up envs array
 	// LAB 3: Your code here.
-
+	cprintf("%s: Set envs\n", __func__);
+	env_free_list = &envs[0];
+	for(int i = 0; i < NENV; i++){
+		envs[i].env_status = ENV_FREE;
+		envs[i].env_id = 0;
+		if(i < NENV - 1) {
+			envs[i].env_link = &envs[i+1];
+		}
+		else {
+			envs[i].env_link = NULL;
+		}
+	}
 	// Per-CPU part of the initialization
 	env_init_percpu();
+	cprintf("%s: Complete\n", __func__);
 }
 
 // Load GDT and segment descriptors.
@@ -161,7 +177,7 @@ env_setup_vm(struct Env *e)
 	// Allocate a page for the page directory
 	if (!(p = page_alloc(ALLOC_ZERO)))
 		return -E_NO_MEM;
-
+	cprintf("%s:\n", __func__);
 	// Now, set e->env_pgdir and initialize the page directory.
 	//
 	// Hint:
@@ -179,7 +195,8 @@ env_setup_vm(struct Env *e)
 	//    - The functions in kern/pmap.h are handy.
 
 	// LAB 3: Your code here.
-
+	e->env_pgdir = page2kva(p);
+	p->pp_ref++;
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
 	e->env_pgdir[PDX(UVPT)] = PADDR(e->env_pgdir) | PTE_P | PTE_U;
@@ -267,6 +284,25 @@ region_alloc(struct Env *e, void *va, size_t len)
 	//   'va' and 'len' values that are not page-aligned.
 	//   You should round va down, and round (va + len) up.
 	//   (Watch out for corner-cases!)
+	
+	cprintf("%s: %p\n", __func__, va);
+	if (len < 1) {
+		panic("Incorrect length");
+	}
+	uintptr_t highAddy = ROUNDUP((uintptr_t)(va + len), len); // I think there is an addition error here
+	uintptr_t lowAddy = ROUNDDOWN((uintptr_t)va, len);
+	uintptr_t totalPages = (highAddy - lowAddy ) / PGSIZE;
+	for(int i = 0; i < totalPages; i++) {
+		// I have no clue what to do next lol
+		struct PageInfo *pp = page_alloc(ALLOC_ZERO);
+		if(!pp){
+			panic("Houston, we had a problem with page_alloc");
+		}
+		int returnValue = page_insert(e->env_pgdir, pp, (void *)(lowAddy + (i * PGSIZE)), PTE_P | PTE_U);
+		if (returnValue < 0) {
+			panic("Houston, we had a problem with page_insert");
+		}
+	}
 }
 
 //

@@ -17,6 +17,7 @@
 #include <kern/consoleColors.h>
 #include <kern/hidden.h>
 #include <kern/trap.h>
+#include <kern/pmap.h>
 
 
 #define CMDBUF_SIZE	80	// enough for one VGA text line
