@@ -199,6 +199,9 @@ env_setup_vm(struct Env *e)
 	p->pp_ref++;
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
+	
+	// from UTOP to 4GB copy kernal pgdir -> env_pgdir : PDX(UTOP) to PDX(NPDENTRIES-1) 
+	memcpy(&(e->env_pgdir[PDX(UTOP)]), &kern_pgdir[PDX(UTOP)], (NPDENTRIES - PDX(UTOP))* sizeof(kern_pgdir[0]));
 	e->env_pgdir[PDX(UVPT)] = PADDR(e->env_pgdir) | PTE_P | PTE_U;
 
 	return 0;
