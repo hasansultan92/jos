@@ -289,16 +289,16 @@ region_alloc(struct Env *e, void *va, size_t len)
 	if (len < 1) {
 		panic("Incorrect length");
 	}
-	uintptr_t highAddy = ROUNDUP((uintptr_t)(va + len), len); // I think there is an addition error here
-	uintptr_t lowAddy = ROUNDDOWN((uintptr_t)va, len);
+	uintptr_t highAddy = ROUNDUP((uintptr_t)(va + len), PGSIZE); // I think there is an addition error here
+	uintptr_t lowAddy = ROUNDDOWN((uintptr_t)va, PGSIZE);
 	uintptr_t totalPages = (highAddy - lowAddy ) / PGSIZE;
-	for(int i = 0; i < totalPages; i++) {
+	for (uintptr_t addr = lowAddy; addr < highAddy; addr += PGSIZE) {
 		// I have no clue what to do next lol
 		struct PageInfo *pp = page_alloc(ALLOC_ZERO);
 		if(!pp){
 			panic("Houston, we had a problem with page_alloc");
 		}
-		int returnValue = page_insert(e->env_pgdir, pp, (void *)(lowAddy + (i * PGSIZE)), PTE_P | PTE_U);
+		int returnValue = page_insert(e->env_pgdir, pp, (void *) addr, PTE_P | PTE_U | PTE_W); // I think
 		if (returnValue < 0) {
 			panic("Houston, we had a problem with page_insert");
 		}
@@ -364,6 +364,24 @@ load_icode(struct Env *e, uint8_t *binary)
 	// at virtual address USTACKTOP - PGSIZE.
 
 	// LAB 3: Your code here.
+	struct Elf *elfHeader = (struct Elf *) binary; // Downcast I believe
+	struct Proghdr *ph, *eph;
+	if(elfHeader->e_magic != ELF_MAGIC) { // How is this the first 4 bytes???
+		panic("Incorrect elf file");
+	}
+	ph = (struct Proghdr *) elfHeader + elfHeader->e_phoff;
+	eph = ph + elfHeader->e_phnum;
+	for (; ph < eph; ph++) {
+		if(ph->p_type != ELF_PROG_LOAD){
+			continue;
+		}
+		region_alloc(e, (void *) ph->p_va, ph->p_memsz);
+		memcpy((void *) ph->p_va, binary + ph->p_offset, ph->p_filesz);
+		memset((void *)(ph->p_va + ph->p_filesz), 0,  ph->p_memsz - ph->p_filesz); // Subtraction from above
+	}
+	region_alloc(e, (void *) (USTACKTOP - PGSIZE), PGSIZE); // Stack allocation
+	e->env_tf.tf_eip = elfHeader->e_entry; // Entry point
+	return;
 }
 
 //
@@ -377,6 +395,14 @@ void
 env_create(uint8_t *binary, enum EnvType type)
 {
 	// LAB 3: Your code here.
+	struct Env *env;
+	int envAllocReturn = env_alloc(&env, 0);
+	if (envAllocReturn == ~E_NO_MEM || envAllocReturn == ~E_NO_FREE_ENV) {
+		panic("I am failing");
+		return;
+	}
+	load_icode(env, binary);
+	env->env_type = type;
 }
 
 //
@@ -493,7 +519,20 @@ env_run(struct Env *e)
 	//	e->env_tf to sensible values.
 
 	// LAB 3: Your code here.
-
-	panic("env_run not yet implemented");
+	if (!e) {
+		// This is invalid
+		panic("You have passed an incorrect env");
+	}
+	if (e->env_status != ENV_RUNNABLE) {
+		panic("Environment cannot run");
+	}
+    if (curenv != e) {
+		// Do we not need to save the original running env registers?
+        curenv = e;
+        curenv->env_status = ENV_RUNNING;
+        curenv->env_runs++;
+    }
+	lcr3(PADDR(curenv->env_pgdir));
+	env_pop_tf(&e->env_tf);
 }
 
