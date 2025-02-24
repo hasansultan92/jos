@@ -364,23 +364,48 @@ load_icode(struct Env *e, uint8_t *binary)
 	// at virtual address USTACKTOP - PGSIZE.
 
 	// LAB 3: Your code here.
+
+	// Downcast binary data -> ELF header
 	struct Elf *elfHeader = (struct Elf *) binary; // Downcast I believe
 	struct Proghdr *ph, *eph;
+	
+	// Verify valid ELF file
 	if(elfHeader->e_magic != ELF_MAGIC) { // How is this the first 4 bytes???
 		panic("Incorrect elf file");
 	}
-	ph = (struct Proghdr *) elfHeader + elfHeader->e_phoff;
-	eph = ph + elfHeader->e_phnum;
+
+	// Find prog header table via the offset stored in ELF header
+	// ph = (struct Proghdr *) elfHeader + elfHeader->e_phoff;
+	ph = (struct Proghdr *) ((uint8_t *) binary + elfHeader->e_phoff); // JI EDIT
+	eph = ph + elfHeader->e_phnum; // end of prog header
+
+	// Switch to env's pg dir
+	lcr3(PADDR(e->env_pgdir));
+
+	// Loop through each prog header
 	for (; ph < eph; ph++) {
-		if(ph->p_type != ELF_PROG_LOAD){
-			continue;
+		// if marked loadable, load segment
+		if(ph->p_type == ELF_PROG_LOAD){
+			
+			// Alocate mem for the segment @ ph->p_va
+			region_alloc(e, (void *) ph->p_va, ph->p_memsz);
+
+			// Copy segment from ELF binary to allocated mem
+			memcpy((void *) ph->p_va, binary + ph->p_offset, ph->p_filesz);
+
+			// Memset remaining uninitialized segment mem to 0 
+			memset((void *)(ph->p_va + ph->p_filesz), 0,  ph->p_memsz - ph->p_filesz); // Subtraction from above
 		}
-		region_alloc(e, (void *) ph->p_va, ph->p_memsz);
-		memcpy((void *) ph->p_va, binary + ph->p_offset, ph->p_filesz);
-		memset((void *)(ph->p_va + ph->p_filesz), 0,  ph->p_memsz - ph->p_filesz); // Subtraction from above
 	}
-	region_alloc(e, (void *) (USTACKTOP - PGSIZE), PGSIZE); // Stack allocation
-	e->env_tf.tf_eip = elfHeader->e_entry; // Entry point
+
+	// Stack allocation
+	region_alloc(e, (void *) (USTACKTOP - PGSIZE), PGSIZE); 
+
+	// Switch back to kern_pgdir
+	lcr3(PADDR(kern_pgdir));
+
+	// Set entry to to addr in ELF header
+	e->env_tf.tf_eip = elfHeader->e_entry;
 	return;
 }
 
