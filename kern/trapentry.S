@@ -54,8 +54,67 @@
 // HINT 3 : READ Intel's manual to check if the trap includes an error code
 //          or not...
 
+
+// Define trap handlers w/out error codes
+TRAPHANDLER_NOEC(t_divide, T_DIVIDE);		// divide error
+TRAPHANDLER_NOEC(t_debug, T_DEBUG);			// debug exception
+TRAPHANDLER_NOEC(t_nmi, T_NMI);				// NMI interupt
+TRAPHANDLER_NOEC(t_bkrpt, T_BRKPT);			// breakpoint
+TRAPHANDLER_NOEC(t_oflow, T_OFLOW);			// overflow
+TRAPHANDLER_NOEC(t_bound, T_BOUND);			// bound range exceeded
+TRAPHANDLER_NOEC(t_illop, T_ILLOP);			// invalid opcode
+TRAPHANDLER_NOEC(t_device, T_DEVICE);		// device not available
+// TRAPHANDLER_NOEC(t_coproc, T_COPROC);		// coprocessor segment overrun
+TRAPHANDLER_NOEC(t_simderr, T_SIMDERR);		// (Intel reserved. Do not use.) 
+
+// Define trap handlers for exceptions 
+TRAPHANDLER(t_dblflt, T_DBLFLT);			// double fault
+TRAPHANDLER(t_tss, T_TSS);					// invalid TSS
+TRAPHANDLER(t_segnp, T_SEGNP);				// segment not present
+TRAPHANDLER(t_stack, T_STACK);				// stack-segment fault
+TRAPHANDLER(t_gpflt, T_GPFLT);				// general protection
+TRAPHANDLER(t_pgflt, T_PGFLT);				// page fault
+// TRAPHANDLER(t_alignt, T_ALIGNT);			// alignment check
+
+// Hardware IRQ numbers
+TRAPHANDLER_NOEC(t_irq0, IRQ_OFFSET + 0)	// timer
+TRAPHANDLER_NOEC(t_irq1, IRQ_OFFSET + 1)	// keyboard
+TRAPHANDLER_NOEC(t_irq2, IRQ_OFFSET + 2)	// cascade 
+TRAPHANDLER_NOEC(t_irq3, IRQ_OFFSET + 3)	// COM2
+TRAPHANDLER_NOEC(t_irq4, IRQ_OFFSET + 4)	// COM1
+TRAPHANDLER_NOEC(t_irq5, IRQ_OFFSET + 5)	// LPT2
+TRAPHANDLER_NOEC(t_irq6, IRQ_OFFSET + 6)	// Floppy disk
+TRAPHANDLER_NOEC(t_irq7, IRQ_OFFSET + 7)	// LPT1
+
 /*
  * Lab 3: Your code here for _alltraps
  */
 
 
+.globl _alltraps
+_alltraps:
+    # Save registers
+    pushal
+    pushl %ds
+    pushl %es
+    pushl %fs
+    pushl %gs
+
+    # Load kernel data segment (in case user mode was running)
+    movl $GD_KD, %eax
+    movw %ax, %ds
+    movw %ax, %es
+
+    # Pass pointer to trapframe to C handler
+    pushl %esp
+    call trap
+
+    # Restore segment registers
+    popl %gs
+    popl %fs
+    popl %es
+    popl %ds
+    popal
+    addl $8, %esp   # Remove error code & trap number
+
+    iret            # Return from interrupt
