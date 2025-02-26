@@ -82,12 +82,6 @@ void t_simderr();
 void t_syscall();
 void t_default();
 
-void irq_timer();
-void irq_kbd();
-void irq_serial();
-void irq_spurious();
-void irq_ide();
-void irq_error();
 
 void
 trap_init(void)
@@ -129,14 +123,6 @@ trap_init(void)
     
     // Default trap handler
     SETGATE(idt[T_DEFAULT], 0, GD_KT, t_default, 0);
-    
-    // Set up IDT entries for hardware interrupts (IRQs)
-    SETGATE(idt[IRQ_OFFSET + IRQ_TIMER], 0, GD_KT, irq_timer, 0);
-    SETGATE(idt[IRQ_OFFSET + IRQ_KBD], 0, GD_KT, irq_kbd, 0);
-    SETGATE(idt[IRQ_OFFSET + IRQ_SERIAL], 0, GD_KT, irq_serial, 0);
-    SETGATE(idt[IRQ_OFFSET + IRQ_SPURIOUS], 0, GD_KT, irq_spurious, 0);
-    SETGATE(idt[IRQ_OFFSET + IRQ_IDE], 0, GD_KT, irq_ide, 0);
-    SETGATE(idt[IRQ_OFFSET + IRQ_ERROR], 0, GD_KT, irq_error, 0);
     
 
 	// Per-CPU setup
@@ -218,7 +204,7 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle processor exceptions.
 	// LAB 3: Your code here.
 
-	// TODO
+	// TODO: JULIANNE / ASK TA
 
 	switch(tf->tf_trapno){
 		case T_PGFLT:
@@ -293,8 +279,16 @@ page_fault_handler(struct Trapframe *tf)
 	fault_va = rcr2();
 
 	// Handle kernel-mode page faults.
-
+	
 	// LAB 3: Your code here.
+
+	// TODO: ASK TA IF WE DO THIS
+	// Checking if fault occurred in kernel mode
+	if((tf->tf_cs & 3) == 0){
+		panic("Page Fault in Kernal Mode");
+	}
+
+
 
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
