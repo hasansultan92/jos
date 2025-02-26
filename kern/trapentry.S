@@ -79,15 +79,15 @@ TRAPHANDLER(t_segnp, T_SEGNP);				// segment not present
 TRAPHANDLER(t_stack, T_STACK);				// stack-segment fault
 TRAPHANDLER(t_gpflt, T_GPFLT);				// general protection
 TRAPHANDLER(t_pgflt, T_PGFLT);				// page fault
-TRAPHANDLER(t_align, T_ALIGN);			// alignment check
+TRAPHANDLER(t_align, T_ALIGN);			    // alignment check
 
 // Hardware IRQ numbers
-TRAPHANDLER_NOEC(t_irq0, IRQ_OFFSET + 0)	// timer
-TRAPHANDLER_NOEC(t_irq1, IRQ_OFFSET + 1)	// keyboard
-TRAPHANDLER_NOEC(t_irq4, IRQ_OFFSET + 4)    // serial (COM1)
-TRAPHANDLER_NOEC(t_irq7, IRQ_OFFSET + 7)    // spurious interrupt
-TRAPHANDLER_NOEC(t_irq14, IRQ_OFFSET + 14)  // IDE
-TRAPHANDLER_NOEC(t_irq19, IRQ_OFFSET + 19)  // error
+TRAPHANDLER_NOEC(irq_timer, IRQ_OFFSET + 0)	    // timer
+TRAPHANDLER_NOEC(irq_kbd, IRQ_OFFSET + 1)	    // keyboard
+TRAPHANDLER_NOEC(irq_serial, IRQ_OFFSET + 4)    // serial (COM1)
+TRAPHANDLER_NOEC(irq_spurious, IRQ_OFFSET + 7)  // spurious interrupt
+TRAPHANDLER_NOEC(irq_ide, IRQ_OFFSET + 14)      // IDE
+TRAPHANDLER_NOEC(irq_error, IRQ_OFFSET + 19)    // error
 
 /*
  * Lab 3: Your code here for _alltraps
