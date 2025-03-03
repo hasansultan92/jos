@@ -50,8 +50,14 @@ static struct Command commands[] = {
 	{"clear", "clear terminal screen",clear},
 	{"memmap","display physical page address mappings", memmap},
 	{"setpermission", "change permissions at addresses",setPerm},
-	{"memdump","isplay memory contents in 16-byte chunks within the specified address range", memdump},
+	{"memdump","display memory contents in 16-byte chunks within the specified address range", memdump},
+	{"si","single instruction step", si},
 };
+
+int si(int argc, char ** argv, struct Trapframe *tf) {
+	tf->tf_eflags |= FL_TF;
+	return -1;
+}
 
 int clear(int argc, char **argv, struct Trapframe *tf) {
 	cprintf("\x1b[2J\x1b[H"); // Found on the internet, QEMU supports this, fun.

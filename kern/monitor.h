@@ -21,4 +21,5 @@ int setPerm(int argc, char ** argv, struct Trapframe *tf);
 int get_permission_flag(const char *perm_str);
 int show(int argc, char **argv, struct Trapframe *tf);
 int clear(int argc, char **argv, struct Trapframe *tf);
+int si(int argc, char **argv, struct Trapframe *tf);
 #endif	// !JOS_KERN_MONITOR_H
