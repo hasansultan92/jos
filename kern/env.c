@@ -388,27 +388,37 @@ load_icode(struct Env *e, uint8_t *binary)
 	// Loop through each prog header
 	for (; ph < eph; ph++) {
 		// if marked loadable, load segment
-		if(ph->p_type == ELF_PROG_LOAD){
+		if(ph->p_type != ELF_PROG_LOAD)
+			continue;
+		
+		// Ensure p_filesz <= p_memsz
+        if (ph->p_filesz > ph->p_memsz)
+            panic("load_icode: p_filesz > p_memsz");
+
 			
-			// Alocate mem for the segment @ ph->p_va
-			region_alloc(e, (void *) ph->p_va, ph->p_memsz);
+		// Alocate mem for the segment @ ph->p_va
+		region_alloc(e, (void *) ph->p_va, ph->p_memsz);
 
-			// Copy segment from ELF binary to allocated mem
-			memcpy((void *) ph->p_va, binary + ph->p_offset, ph->p_filesz);
+		// Copy segment from ELF binary to allocated mem
+		memcpy((void *) ph->p_va, binary + ph->p_offset, ph->p_filesz);
 
-			// Memset remaining uninitialized segment mem to 0 
-			memset((void *)(ph->p_va + ph->p_filesz), 0,  ph->p_memsz - ph->p_filesz); // Subtraction from above
-		}
+		// Memset remaining uninitialized segment mem to 0 
+		memset((void *)(ph->p_va + ph->p_filesz), 0,  ph->p_memsz - ph->p_filesz); // Subtraction from above
+			
+		// Zero the BSS segment (mem btwn p_filesz - p_memsz)
+		// if (ph->p_memsz > ph->p_filesz) {
+		// 	memset((void *)(ph->p_va + ph->p_filesz), 0, ph->p_memsz - ph->p_filesz);
 	}
 
 	// Stack allocation
 	region_alloc(e, (void *) (USTACKTOP - PGSIZE), PGSIZE); 
 
+	// Set entry to to addr in ELF header
+	e->env_tf.tf_eip = elfHeader->e_entry;
+
 	// Switch back to kern_pgdir
 	lcr3(PADDR(kern_pgdir));
 
-	// Set entry to to addr in ELF header
-	e->env_tf.tf_eip = elfHeader->e_entry;
 	return;
 }
 
@@ -547,6 +557,8 @@ env_run(struct Env *e)
 	//	e->env_tf to sensible values.
 
 	// LAB 3: Your code here.
+
+	// JULLIANNE TODO
 	if (!e) {
 		// This is invalid
 		panic("You have passed an incorrect env");
