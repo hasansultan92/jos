@@ -403,11 +403,12 @@ load_icode(struct Env *e, uint8_t *binary)
 		memcpy((void *) ph->p_va, binary + ph->p_offset, ph->p_filesz);
 
 		// Memset remaining uninitialized segment mem to 0 
-		memset((void *)(ph->p_va + ph->p_filesz), 0,  ph->p_memsz - ph->p_filesz); // Subtraction from above
-			
+		if (ph->p_memsz > ph->p_filesz) {
+            memset((void *)(ph->p_va + ph->p_filesz), 0, ph->p_memsz - ph->p_filesz);
+        }
 		// Zero the BSS segment (mem btwn p_filesz - p_memsz)
 		// if (ph->p_memsz > ph->p_filesz) {
-		// 	memset((void *)(ph->p_va + ph->p_filesz), 0, ph->p_memsz - ph->p_filesz);
+			// 	memset((void *)(ph->p_va + ph->p_filesz), 0, ph->p_memsz - ph->p_filesz);
 	}
 
 	// Stack allocation
@@ -415,6 +416,7 @@ load_icode(struct Env *e, uint8_t *binary)
 
 	// Set entry to to addr in ELF header
 	e->env_tf.tf_eip = elfHeader->e_entry;
+	e->env_tf.tf_esp = USTACKTOP;
 
 	// Switch back to kern_pgdir
 	lcr3(PADDR(kern_pgdir));
@@ -563,15 +565,14 @@ env_run(struct Env *e)
 		// This is invalid
 		panic("You have passed an incorrect env");
 	}
-	if (e->env_status != ENV_RUNNABLE) {
-		panic("Environment cannot run");
+	if (curenv && curenv->env_status == ENV_RUNNING){
+		curenv->env_status = ENV_RUNNABLE;
 	}
-    if (curenv != e) {
-		// Do we not need to save the original running env registers?
-        curenv = e;
-        curenv->env_status = ENV_RUNNING;
-        curenv->env_runs++;
-    }
+	// Do we not need to save the original running env registers?
+	curenv = e;
+	curenv->env_status = ENV_RUNNING;
+	curenv->env_runs++;
+
 	lcr3(PADDR(curenv->env_pgdir));
 	env_pop_tf(&e->env_tf);
 }

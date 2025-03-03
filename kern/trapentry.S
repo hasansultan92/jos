@@ -89,10 +89,10 @@ TRAPHANDLER(t_align, T_ALIGN);			    // alignment check
 .globl _alltraps
 _alltraps:
     # Save registers
-    pushal
     # Push only the segment registers defined in Trapframe
     pushl %ds
     pushl %es
+    pushal
 
     # Load kernel data segment (in case user mode was running)
     movl $GD_KD, %eax
@@ -104,9 +104,10 @@ _alltraps:
     call trap
 
     # Restore only the segment registers that were pushed
-    popl %es
-    popl %ds
-    popal
-    addl $8, %esp   # Remove error code & trap number
+    # addl $4, %esp
+    # popal
+    # popl %es
+    # popl %ds
+    # addl $8, %esp   # Remove error code & trap number
 
-    iret            # Return from interrupt
+    # iret            # Return from interrupt
