@@ -103,11 +103,4 @@ _alltraps:
     pushl %esp
     call trap
 
-    # Restore only the segment registers that were pushed
-    # addl $4, %esp
-    # popal
-    # popl %es
-    # popl %ds
-    # addl $8, %esp   # Remove error code & trap number
-
-    # iret            # Return from interrupt
+    
