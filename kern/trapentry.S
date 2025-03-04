@@ -85,6 +85,22 @@ TRAPHANDLER(t_align, T_ALIGN);			    // alignment check
  * Lab 3: Your code here for _alltraps
  */
 
+.globl sysenter_handler
+sysenter_handler:
+    push $0 # dummy value since syscall takes 5 arguments and not 4, this handler takes 4
+	pushl %edi
+    pushl %ebx
+    pushl %ecx
+    pushl %edx
+    pushl %eax
+
+    
+    call syscall
+	addl $24 %esp
+	
+	mov %esi, %edx
+	mov %ebp, %ecx
+	sysexit
 
 .globl _alltraps
 _alltraps:
