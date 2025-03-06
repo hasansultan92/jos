@@ -105,6 +105,16 @@ outl(int port, uint32_t data)
 	asm volatile("outl %0,%w1" : : "a" (data), "d" (port));
 }
 
+#define MSR_IA32_SYSENTER_CS                        0x174
+#define MSR_IA32_SYSENTER_ESP                       0x175
+#define MSR_IA32_SYSENTER_EIP                       0x176
+
+static inline void
+wrmsr(uint32_t firstVal, uint32_t lastVal, uint32_t flag)
+{
+	asm volatile("wrmsr" : : "a" (lastVal), "d" (firstVal), "c" (flag));
+}
+
 static inline void
 invlpg(void *addr)
 {

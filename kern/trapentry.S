@@ -96,7 +96,7 @@ sysenter_handler:
 
     
     call syscall
-	addl $24 %esp
+	addl $24, %esp 
 	
 	mov %esi, %edx
 	mov %ebp, %ecx
