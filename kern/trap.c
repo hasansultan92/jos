@@ -102,7 +102,7 @@ trap_init(void)
     SETGATE(idt[T_DIVIDE], 0, GD_KT, t_divide, 0);
     SETGATE(idt[T_DEBUG], 0, GD_KT, t_debug, 0);
     SETGATE(idt[T_NMI], 0, GD_KT, t_nmi, 0);
-    SETGATE(idt[T_BRKPT], 0, GD_KT, t_bkrpt, 3); // Allow user to use breakpoints
+    SETGATE(idt[T_BRKPT], 0, GD_KT, t_bkrpt, 3);
     SETGATE(idt[T_OFLOW], 0, GD_KT, t_oflow, 0);
     SETGATE(idt[T_BOUND], 0, GD_KT, t_bound, 0);
     SETGATE(idt[T_ILLOP], 0, GD_KT, t_illop, 0);
@@ -292,7 +292,7 @@ page_fault_handler(struct Trapframe *tf)
 	// TODO: ASK TA IF WE DO THIS
 	// Check if fault occurred in kernel mode
 	if((tf->tf_cs & 3) == 0){
-		panic("Page Fault in Kernal Mode");
+		panic("Kernal-Mode Page Fault");
 	}
 
 

@@ -668,20 +668,28 @@ user_mem_check(struct Env *env, const void *va, size_t len, int perm)
     
     // Check each page in the range
     for (uintptr_t addr = start; addr < end; addr += PGSIZE) {
-        // LLMPROMPT: Check if address is below ULIM
+        //LLMPROMPT: Check if address is below ULIM
         if (addr >= ULIM) {
-            user_mem_check_addr = (addr == start) ? (uintptr_t)va : addr;
-            return -E_FAULT;
-        }
+			if (addr == start) {
+				user_mem_check_addr = (uintptr_t)va;
+			} else {
+				user_mem_check_addr = addr;
+			}
+			return -E_FAULT;
+		}
         
         // Look up the page table entry
         pte_t *pte = pgdir_walk(env->env_pgdir, (void *)addr, 0);
         
         //LLMPROMPT: Check if page exists and has required permissions
         if (!pte || !(*pte & PTE_P) || (*pte & perm) != perm) {
-            user_mem_check_addr = (addr == start) ? (uintptr_t)va : addr;
-            return -E_FAULT;
-        }
+			if (addr == start) {
+				user_mem_check_addr = (uintptr_t)va;
+			} else {
+				user_mem_check_addr = addr;
+			}
+			return -E_FAULT;
+		}
     }
     
 	return 0;

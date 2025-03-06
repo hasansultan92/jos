@@ -562,8 +562,7 @@ env_run(struct Env *e)
 
 	// JULLIANNE TODO
 	if (!e) {
-		// This is invalid
-		panic("You have passed an incorrect env");
+		panic("Passed an incorrect env");
 	}
 	if (curenv && curenv->env_status == ENV_RUNNING){
 		curenv->env_status = ENV_RUNNABLE;
