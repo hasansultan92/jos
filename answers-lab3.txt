@@ -5,13 +5,14 @@ Exercise 4
         (i.e., if all exceptions/interrupts were delivered to the same handler, what feature that 
         exists in the current implementation could not be provided?)
 
-        The purpose of having individual handler functions for each exception/interrupt is to allows
-        different privelege level checks and error code handling. For example, some interrupts push
-        error codes onto the stack while others do not. Having seperate handlers allows for us to 
-        define which interrupts push error codes onto the stack and which do not. Additionally, having
-        seperate handlers allows the kernel to enforce different privelege levels. For example system 
-        calls (syscall) are invoked from user mode (ring 3) and other interrupts can only be invoked
-        from kernel mode (ring 0). 
+        The purpose of having individual handler functions for each exception/interrupt is to enable 
+        privilege level checking and error code handling. Each interrupt must be configured for its 
+        unique function and to indicate to the system how it should be handled. For example, some 
+        interrupts push error codes onto the stack while others do not. Having separate handlers 
+        allows for us to define which interrupts push error codes onto the stack and which do not. 
+        Additionally, having separate handlers allows the kernel to enforce different privilege 
+        levels. For example system calls (syscall) are invoked from user mode (ring 3) and other 
+        interrupts can only be invoked from kernel mode (ring 0).
         
         2. Did you have to do anything to make the user/softint program behave correctly? 
         The grade script expects it to produce a general protection fault (trap 13), 
@@ -19,17 +20,23 @@ Exercise 4
         What happens if the kernel actually allows softint’s int $14 instruction to invoke 
         the kernel’s page fault handler (which is interrupt vector 14)?
 
-        The user/softint uses int $14 to try to directly trigger a page fault 
-
-Challenge 1 (Extra Credit: 1%)
-
-
-        1. The break point test case will either generate a break point exception or a general 
-        protection fault depending on how you initialized the break point entry in the IDT 
-        (i.e., your call to SETGATE from trap_init). Why? How do you need to set it up in 
-        order to get the breakpoint exception to work as specified above and what incorrect 
-        setup would cause it to trigger a general protection fault?
+        To make the user/softint program behave correctly, the system considers priveledge levels 
+        and interrupt permissions. When the the user-level program (ring 3) attempts to execute 
+        an int $14 instruction, the processor checks the privelege level required to invoke 
+        said interrupt--which is specified in the DPL feild of the IDT entry. In this case where 
+        the DPL is 0 (kernel level) for vector 14's interrupt handler and the user program operates 
+        in ring 3 (user mode), the processor will automatically generate a general protection fault 
+        (trap 13) instead of the requested interrupt.
         
-        2. What do you think is the point of these mechanisms, particularly in light of what 
-        the user/softint test program does?
-
+        This should produce interrupt vector 13 as a form of system security protection. The x86 
+        architecture enforces privilege checking for software interrupts. When a program attempts 
+        to execute an interrupt instruction for a vector that does not have the required priveldge 
+        level access, the processor will generate a general protection fault to prevent the 
+        underpriveldged program from modifying any sensitive data.
+        
+        If the kernel actually allows softint's int $14 instrcution to invoke kernel's page fault handler, 
+        it would expose security vulnerabilities and possibly lead to the manipulation of memory management 
+        and mapping. This could enable unprivileged code to trick the kernel into mapping unauthorized pages, 
+        and modify protected memory regions or create denial-of-service attacks. This would be a breach of 
+        system security and could lead to very bad things!
+       
