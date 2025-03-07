@@ -34,7 +34,7 @@ Exercise 4
         level access, the processor will generate a general protection fault to prevent the 
         underpriveldged program from modifying any sensitive data.
         
-        If the kernel actually allows softint's int $14 instrcution to invoke kernel's page fault handler, 
+        If the kernel actually allows softint's int $14 instruction to invoke kernel's page fault handler, 
         it would expose security vulnerabilities and possibly lead to the manipulation of memory management 
         and mapping. This could enable unprivileged code to trick the kernel into mapping unauthorized pages, 
         and modify protected memory regions or create denial-of-service attacks. This would be a breach of 
