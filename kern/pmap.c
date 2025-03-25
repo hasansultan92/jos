@@ -372,22 +372,29 @@ page_init(void)
 	// free pages!
 	cprintf("%s: Intializing pages\n", __func__);
 	size_t i;
-	// Point 1
-	pages[0].pp_ref = 1;
-	pages[0].pp_link = NULL;
+
+	// Get next free va after kernal
 	uint32_t * nextfree = boot_alloc(0);
+
+	// Point 1: Mark physical page 0 as in use
+    pages[0].pp_ref = 1;
+    pages[0].pp_link = NULL;
+
+	// Lab 4:
 	for(i = 1; i < npages; i++){
 		// Point 2 and 4
-		if (i >= PADDR(nextfree)/PGSIZE || i < PGNUM(IOPHYSMEM)) {
+		if ((i >= PADDR(nextfree)/PGSIZE || i < PGNUM(IOPHYSMEM)) && i != PGNUM(MPENTRY_PADDR)) {
 			pages[i].pp_ref = 0;
 			pages[i].pp_link = page_free_list;
 			page_free_list = &pages[i];
 		} 
 		else {
+			// Mark MPENTRY_PADDR page as in use in the else condition
 			pages[i].pp_ref = 1;
 			pages[i].pp_link = NULL;
 		}
 	}
+
 	cprintf("%s: Intializing complete\n", __func__);
 }
 
@@ -702,19 +709,21 @@ mmio_map_region(physaddr_t pa, size_t size)
 	
 	// Handle Reservation Overflow
 	if(base + size_roundup > MMIOLIM){
-		panic("mmio_map_region overflow")
+		panic("mmio_map_region overflow");
 	}
 
 	// Set the MMIO Region Start to the current base
 	uintptr_t mmio_region_start = base;
 
+	physaddr_t pa_rounddown = ROUNDDOWN(pa, PGSIZE);
+
 	// Map bytes to [pa, pa + size]
-	boot_map_region(kern_pgdir, mmio_region_start, size_roundup, pa, PTE_PCD | PTE_PWT | PTE_W);
+	boot_map_region(kern_pgdir, mmio_region_start, size_roundup, pa_rounddown, PTE_PCD | PTE_PWT | PTE_W);
 
 	// Update base to the next available address
 	base += size_roundup;
 
-	return void(*) mmio_region_start; 
+	return (void*) (mmio_region_start + PGOFF(pa));
 	// panic("mmio_map_region not implemented");
 }
 
