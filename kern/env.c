@@ -1,5 +1,9 @@
 /* See COPYRIGHT for copyright information. */
 
+#include "inc/env.h"
+#include "inc/memlayout.h"
+#include "inc/stdio.h"
+#include "inc/types.h"
 #include <inc/x86.h>
 #include <inc/mmu.h>
 #include <inc/error.h>
@@ -119,9 +123,21 @@ env_init(void)
 {
 	// Set up envs array
 	// LAB 3: Your code here.
-
+	cprintf("%s: Set envs\n", __func__);
+	env_free_list = &envs[0];
+	for(int i = 0; i < NENV; i++){
+		envs[i].env_status = ENV_FREE;
+		envs[i].env_id = 0;
+		if(i < NENV - 1) {
+			envs[i].env_link = &envs[i+1];
+		}
+		else {
+			envs[i].env_link = NULL;
+		}
+	}
 	// Per-CPU part of the initialization
 	env_init_percpu();
+	cprintf("%s: Complete\n", __func__);
 }
 
 // Load GDT and segment descriptors.
@@ -164,7 +180,7 @@ env_setup_vm(struct Env *e)
 	// Allocate a page for the page directory
 	if (!(p = page_alloc(ALLOC_ZERO)))
 		return -E_NO_MEM;
-
+	cprintf("%s:\n", __func__);
 	// Now, set e->env_pgdir and initialize the page directory.
 	//
 	// Hint:
@@ -182,9 +198,13 @@ env_setup_vm(struct Env *e)
 	//    - The functions in kern/pmap.h are handy.
 
 	// LAB 3: Your code here.
-
+	e->env_pgdir = page2kva(p);
+	p->pp_ref++;
 	// UVPT maps the env's own page table read-only.
 	// Permissions: kernel R, user R
+	
+	// from UTOP to 4GB copy kernal pgdir -> env_pgdir : PDX(UTOP) to PDX(NPDENTRIES-1) 
+	memcpy(&(e->env_pgdir[PDX(UTOP)]), &kern_pgdir[PDX(UTOP)], (NPDENTRIES - PDX(UTOP))* sizeof(kern_pgdir[0]));
 	e->env_pgdir[PDX(UVPT)] = PADDR(e->env_pgdir) | PTE_P | PTE_U;
 
 	return 0;
@@ -279,6 +299,25 @@ region_alloc(struct Env *e, void *va, size_t len)
 	//   'va' and 'len' values that are not page-aligned.
 	//   You should round va down, and round (va + len) up.
 	//   (Watch out for corner-cases!)
+	
+	cprintf("%s: %p\n", __func__, va);
+	if (len < 1) {
+		panic("Incorrect length");
+	}
+	uintptr_t highAddy = ROUNDUP((uintptr_t)(va + len), PGSIZE); // I think there is an addition error here
+	uintptr_t lowAddy = ROUNDDOWN((uintptr_t)va, PGSIZE);
+	uintptr_t totalPages = (highAddy - lowAddy ) / PGSIZE;
+	for (uintptr_t addr = lowAddy; addr < highAddy; addr += PGSIZE) {
+		// I have no clue what to do next lol
+		struct PageInfo *pp = page_alloc(ALLOC_ZERO);
+		if(!pp){
+			panic("Houston, we had a problem with page_alloc");
+		}
+		int returnValue = page_insert(e->env_pgdir, pp, (void *) addr, PTE_P | PTE_U | PTE_W); // I think
+		if (returnValue < 0) {
+			panic("Houston, we had a problem with page_insert");
+		}
+	}
 }
 
 //
@@ -340,6 +379,61 @@ load_icode(struct Env *e, uint8_t *binary)
 	// at virtual address USTACKTOP - PGSIZE.
 
 	// LAB 3: Your code here.
+
+	// Downcast binary data -> ELF header
+	struct Elf *elfHeader = (struct Elf *) binary; // Downcast I believe
+	struct Proghdr *ph, *eph;
+	
+	// Verify valid ELF file
+	if(elfHeader->e_magic != ELF_MAGIC) { // How is this the first 4 bytes???
+		panic("Incorrect elf file");
+	}
+
+	// Find prog header table via the offset stored in ELF header
+	// ph = (struct Proghdr *) elfHeader + elfHeader->e_phoff;
+	ph = (struct Proghdr *) ((uint8_t *) binary + elfHeader->e_phoff); // JI EDIT
+	eph = ph + elfHeader->e_phnum; // end of prog header
+
+	// Switch to env's pg dir
+	lcr3(PADDR(e->env_pgdir));
+
+	// Loop through each prog header
+	for (; ph < eph; ph++) {
+		// if marked loadable, load segment
+		if(ph->p_type != ELF_PROG_LOAD)
+			continue;
+		
+		// Ensure p_filesz <= p_memsz
+        if (ph->p_filesz > ph->p_memsz)
+            panic("load_icode: p_filesz > p_memsz");
+
+			
+		// Alocate mem for the segment @ ph->p_va
+		region_alloc(e, (void *) ph->p_va, ph->p_memsz);
+
+		// Copy segment from ELF binary to allocated mem
+		memcpy((void *) ph->p_va, binary + ph->p_offset, ph->p_filesz);
+
+		// Memset remaining uninitialized segment mem to 0 
+		if (ph->p_memsz > ph->p_filesz) {
+            memset((void *)(ph->p_va + ph->p_filesz), 0, ph->p_memsz - ph->p_filesz);
+        }
+		// Zero the BSS segment (mem btwn p_filesz - p_memsz)
+		// if (ph->p_memsz > ph->p_filesz) {
+			// 	memset((void *)(ph->p_va + ph->p_filesz), 0, ph->p_memsz - ph->p_filesz);
+	}
+
+	// Stack allocation
+	region_alloc(e, (void *) (USTACKTOP - PGSIZE), PGSIZE); 
+
+	// Set entry to to addr in ELF header
+	e->env_tf.tf_eip = elfHeader->e_entry;
+	e->env_tf.tf_esp = USTACKTOP;
+
+	// Switch back to kern_pgdir
+	lcr3(PADDR(kern_pgdir));
+
+	return;
 }
 
 //
@@ -353,6 +447,14 @@ void
 env_create(uint8_t *binary, enum EnvType type)
 {
 	// LAB 3: Your code here.
+	struct Env *env;
+	int envAllocReturn = env_alloc(&env, 0);
+	if (envAllocReturn == ~E_NO_MEM || envAllocReturn == ~E_NO_FREE_ENV) {
+		panic("I am failing");
+		return;
+	}
+	load_icode(env, binary);
+	env->env_type = type;
 }
 
 //
@@ -484,6 +586,19 @@ env_run(struct Env *e)
 
 	// LAB 3: Your code here.
 
-	panic("env_run not yet implemented");
+	// JULLIANNE TODO
+	if (!e) {
+		panic("Passed an incorrect env");
+	}
+	if (curenv && curenv->env_status == ENV_RUNNING){
+		curenv->env_status = ENV_RUNNABLE;
+	}
+	// Do we not need to save the original running env registers?
+	curenv = e;
+	curenv->env_status = ENV_RUNNING;
+	curenv->env_runs++;
+
+	lcr3(PADDR(curenv->env_pgdir));
+	env_pop_tf(&e->env_tf);
 }
 
