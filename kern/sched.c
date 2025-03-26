@@ -30,6 +30,29 @@ sched_yield(void)
 
 	// LAB 4: Your code here.
 
+	// Find: next env after curenv
+	int next_env_idx = 0;
+	if(curenv){
+		next_env_idx = ENVX(curenv->env_id) + 1;
+	}
+
+	// Circular search for a runnable env
+	// n = number of envs accounted for
+	for(int n = 0; n < NENV ; n++){
+		int idx = (next_env_idx + n) % NENV;
+		if(envs[idx].env_status == ENV_RUNNABLE){
+			env_run(&envs[idx]);
+			return;
+		}
+	}
+
+	// If no runnable env found & curenv running, continue curenv
+	if(curenv && curenv->env_status == ENV_RUNNING){
+		env_run(curenv);
+		return;
+	}
+
+	// No runnable env found
 	// sched_halt never returns
 	sched_halt();
 }
