@@ -282,7 +282,10 @@ mem_init(void)
 	// Your code goes here:
 
 	// Initialize the SMP-related parts of the memory map
-	mem_init_mp();
+	boot_map_region(kern_pgdir, KERNBASE, 0xFFFFFFFF-KERNBASE, 0, (PTE_W | PTE_P));
+
+	// Call mem_init_mp
+    mem_init_mp();
 
 	// Check that the initial page directory has been set up correctly.
 	check_kern_pgdir();
@@ -332,6 +335,21 @@ mem_init_mp(void)
 	//
 	// LAB 4: Your code here:
 
+	uintptr_t kstacktop;
+
+	for(int i = 0; i < NCPU; i++){
+
+		// Top of stack for CPU i
+		kstacktop = KSTACKTOP - i * (KSTKSIZE + KSTKGAP);
+
+		// Map Region: Permissions-> kernel RW, user NONE
+		boot_map_region(kern_pgdir,
+			kstacktop - KSTKSIZE, 
+			KSTKSIZE,
+			PADDR(percpu_kstacks[i]), 
+			PTE_P | PTE_W);
+	}
+	
 }
 
 // --------------------------------------------------------------
