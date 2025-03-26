@@ -85,7 +85,20 @@ sys_exofork(void)
 	// will appear to return 0.
 
 	// LAB 4: Your code here.
-	panic("sys_exofork not implemented");
+	struct Env *new_env;
+
+	// Create a new environmnet
+	int env_alloc_ret = env_alloc(&new_env, curenv->env_id);
+	if(env_alloc_ret < 0 ){
+		return env_alloc_ret;
+	}
+
+	new_env->env_status = ENV_NOT_RUNNABLE; // Mark new env as not runnable
+	new_env->env_tf = curenv->env_tf; 		// Copy registers from curenv
+	new_env->env_tf.tf_regs.reg_eax = 0;	// Make exofork return 0 in the child
+	return new_env->env_id;					// Return the new_env's ID to parent
+
+	//panic("sys_exofork not implemented");
 }
 
 // Set envid's env_status to status, which must be ENV_RUNNABLE
@@ -105,6 +118,7 @@ sys_env_set_status(envid_t envid, int status)
 	// envid's status.
 
 	// LAB 4: Your code here.
+
 	panic("sys_env_set_status not implemented");
 }
 
