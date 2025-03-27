@@ -1,5 +1,6 @@
 /* See COPYRIGHT for copyright information. */
 
+#include "inc/env.h"
 #include <inc/x86.h>
 #include <inc/error.h>
 #include <inc/string.h>
@@ -118,8 +119,21 @@ sys_env_set_status(envid_t envid, int status)
 	// envid's status.
 
 	// LAB 4: Your code here.
-
-	panic("sys_env_set_status not implemented");
+	struct Env *e;
+	if (status != ENV_RUNNABLE && status != ENV_NOT_RUNNABLE){
+		return -E_INVAL;
+	}
+	if (envid < 0) {
+		return -E_INVAL;
+	}
+	// Do we need to worry about cases where the value of envid is 0?
+	int returnValue = envid2env(envid, &e, 1);
+	if (returnValue < 0){ 
+		// e should be NULL
+		return -E_BAD_ENV;
+	}
+	e->env_status = status;
+	return 0;
 }
 
 // Set the page fault upcall for 'envid' by modifying the corresponding struct
@@ -134,7 +148,14 @@ static int
 sys_env_set_pgfault_upcall(envid_t envid, void *func)
 {
 	// LAB 4: Your code here.
-	panic("sys_env_set_pgfault_upcall not implemented");
+	struct Env *e;
+	int returnValue = envid2env(envid,&e, 1);
+	if (returnValue < 0){ 
+		// e should be NULL
+		return -E_BAD_ENV;
+	}
+	e->env_pgfault_upcall = func;
+	return 0;
 }
 
 // Allocate a page of memory and map it at 'va' with permission

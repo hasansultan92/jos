@@ -545,7 +545,7 @@ boot_map_region(pde_t *pgdir, uintptr_t va, size_t size, physaddr_t pa, int perm
 {
 	// Fill this function in
 	// I assume they will give random values to break this function
-	cprintf("%s: %p\n", __func__, va);
+	//cprintf("%s: %p\n", __func__, va);
 	for (int i = 0, n = (size + PGSIZE - 1) / PGSIZE; i < n; i++) {
 		pte_t *pte = pgdir_walk(pgdir,(void*) (va + (i * PGSIZE)), 1);
 		if (pte == NULL){
@@ -586,7 +586,7 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 	// Fill this function in
 
 	// Get the PTE and create a new page table if necessary
-	cprintf("Mapping va %p to pa %p\n", va, page2pa(pp));
+	//cprintf("Mapping va %p to pa %p\n", va, page2pa(pp));
 	pte_t *pte = pgdir_walk(pgdir,(void*) va, 1);
 	if (pte == NULL){
 		cprintf("%s: failed at va: %p\n", __func__, va);
@@ -609,7 +609,7 @@ page_insert(pde_t *pgdir, struct PageInfo *pp, void *va, int perm)
 	// Map new page
     pp->pp_ref++;
 	*pte = page2pa(pp) | perm | PTE_P;
-	cprintf("Mapped PTE %p: %08x\n", pte, *pte);
+	//cprintf("Mapped PTE %p: %08x\n", pte, *pte);
 
 	return 0;
 }
