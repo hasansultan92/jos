@@ -153,7 +153,7 @@ sys_env_set_pgfault_upcall(envid_t envid, void *func)
 //	-E_INVAL if perm is inappropriate (see above).
 //	-E_NO_MEM if there's no memory to allocate the new page,
 //		or to allocate any necessary page tables.
-static int
+
 sys_page_alloc(envid_t envid, void *va, int perm)
 {
 	// Hint: This function is a wrapper around page_alloc() and
@@ -164,6 +164,45 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	//   allocated!
 
 	// LAB 4: Your code here.
+
+	strcut Env *env;
+	struct PageInfo *pp;
+	int ret;
+
+	// Check: environment exists & caller permissions
+	if((ret = envid2env(envid, &env, 1)) <0 ){
+		return ret;
+	}
+
+	// Check: virtual address is below UTOP & page-aligned
+	if((uintptr_t)va >= UTOP || ((uintptr_t)va % PGSIZE) != 0){
+		return -E_INVAL;
+	}
+
+	// Check: vartual address is below UTOP & page-aligned
+	if((perm & (PTE_U | PTE_P)) != (PTE_U | PTE_P)){
+		return -E_INVAL;
+	}
+
+	// Check if invalid bits are set
+	if((perm & ~PTE_SYSCALL)){
+		return -E_INVAL;
+	}
+
+	// Allocate a physical page
+	if((pp = page_alloc(ALLOC_ZERO)) == NULL){
+		return E_NO_MEM;
+	}
+
+	// Map page at va
+	if((ret = page_insert(env->env_pgdir, pp, va, perm)) <0){
+		// Free page if map failed
+		page_free(pp);
+		return ret;
+	}
+	
+	return 0;
+
 	panic("sys_page_alloc not implemented");
 }
 
