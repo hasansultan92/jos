@@ -192,8 +192,8 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 
 	// Check: -E_BAD_ENV if environment envid doesn't currently exist,
 	// or the caller doesn't have permission to change envid.
-	if(envid2env(envid, &env, 1) < 0 ){
-		return -E_BAD_ENV;
+	if((ret = envid2env(envid, &env, 1)) < 0 ){
+		return ret; // -E_BAD_ENV;
 	}
 
 	// Check: va >= UTOP, or va is not page-aligned
@@ -263,14 +263,15 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	struct Env *dstenv;
 	struct PageInfo *pg;
 	pte_t *pte;
+	int ret;
 
 	// Check: srcenvid and/or dstenvid doesn't currently exist,
 	// or the caller doesn't have permission to change one of them.
-	if((envid2env(srcenvid, &srcenv, 1)) < 0){
-		return -E_BAD_ENV; // ret E_BAD_ENV
+	if((ret = envid2env(srcenvid, &srcenv, 1)) < 0){
+		return ret; // ret =  -E_BAD_ENV
 	}
-	else if((envid2env(srcenvid, &dstenv, 1)) < 0){
-		return -E_BAD_ENV; // ret E_BAD_ENV
+	else if((ret = envid2env(dstenvid, &dstenv, 1)) < 0){
+		return ret; // ret =  -E_BAD_ENV
 	}
 
 	// Check: srcva >= UTOP or srcva is not page-aligned,
@@ -321,11 +322,12 @@ sys_page_unmap(envid_t envid, void *va)
 	// LAB 4: Your code here.
 
 	struct Env *env;
+	int ret;
 
 	// Check: environment envid doesn't currently exist,
 	// or the caller doesn't have permission to change envid.
-	if((envid2env(envid, &env, 1)) < 0){
-		return -E_BAD_ENV;
+	if((ret = envid2env(envid, &env, 1)) < 0){
+		return ret; // ret = -E_BAD_ENV;
 	}
 
 	// Check: va >= UTOP, or va is not page-aligned.
@@ -425,6 +427,19 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return sys_getenvid();
 	case SYS_env_destroy:
 		return sys_env_destroy(a1);
+	case SYS_yield:
+		sys_yield();
+		return 0;
+	case SYS_exofork:
+		return sys_exofork();
+	case SYS_env_set_status:
+		return sys_env_set_status(a1, a2);
+	case SYS_page_alloc:
+		return sys_page_alloc(a1, (void*)a2, a3);
+	case SYS_page_map:
+		return sys_page_map(a1, (void*)a2, a3, (void *)a4, a5);
+	case SYS_page_unmap:
+		return sys_page_unmap(a1, (void*)a2);
 	default:
 		return -E_INVAL;
 	}

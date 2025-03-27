@@ -400,6 +400,19 @@ page_fault_handler(struct Trapframe *tf)
 
 	// LAB 4: Your code here.
 
+	// Set up a page fault stack frame on the user exception stack (below
+	// UXSTACKTOP), then branch to curenv->env_pgfault_upcall.
+	// Call the environment's page fault upcall
+	if(curenv->env_pgfault_upcall){
+		struct UTrapframe *utf;
+
+		// TODO: JULIANNE 
+		// if((UXSTACKTOP - PGSIZE <= tf->tf_esp) && (tf->tf_esp < UXSTACKTOP)){
+
+		// }
+	}
+
+
 	// Destroy the environment that caused the fault.
 	cprintf("[%08x] user fault va %08x ip %08x\n",
 		curenv->env_id, fault_va, tf->tf_eip);
