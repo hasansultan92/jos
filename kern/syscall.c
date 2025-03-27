@@ -174,7 +174,7 @@ sys_env_set_pgfault_upcall(envid_t envid, void *func)
 //	-E_INVAL if perm is inappropriate (see above).
 //	-E_NO_MEM if there's no memory to allocate the new page,
 //		or to allocate any necessary page tables.
-
+static int
 sys_page_alloc(envid_t envid, void *va, int perm)
 {
 	// Hint: This function is a wrapper around page_alloc() and
@@ -186,16 +186,17 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 
 	// LAB 4: Your code here.
 
-	strcut Env *env;
-	struct PageInfo *pp;
+	struct Env *env;
+	struct PageInfo *pg;
 	int ret;
 
-	// Check: environment exists & caller permissions
-	if((ret = envid2env(envid, &env, 1)) <0 ){
-		return ret;
+	// Check: -E_BAD_ENV if environment envid doesn't currently exist,
+	// or the caller doesn't have permission to change envid.
+	if(envid2env(envid, &env, 1) < 0 ){
+		return -E_BAD_ENV;
 	}
 
-	// Check: virtual address is below UTOP & page-aligned
+	// Check: va >= UTOP, or va is not page-aligned
 	if((uintptr_t)va >= UTOP || ((uintptr_t)va % PGSIZE) != 0){
 		return -E_INVAL;
 	}
@@ -205,26 +206,28 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 		return -E_INVAL;
 	}
 
-	// Check if invalid bits are set
+	// Check: perm is inappropriate 
 	if((perm & ~PTE_SYSCALL)){
 		return -E_INVAL;
 	}
 
-	// Allocate a physical page
-	if((pp = page_alloc(ALLOC_ZERO)) == NULL){
-		return E_NO_MEM;
+	// Check: there's no memory to allocate the new page,
+	// or to allocate any necessary page tables
+	if((pg = page_alloc(ALLOC_ZERO)) == NULL){
+		return -E_NO_MEM;
 	}
 
-	// Map page at va
-	if((ret = page_insert(env->env_pgdir, pp, va, perm)) <0){
-		// Free page if map failed
-		page_free(pp);
+	// Allocate a page of memory and map it at 'va' with permission
+	// 'perm' in the address space of 'envid'
+	if((ret = page_insert(env->env_pgdir, pg, va, perm)) <0){
+		// page_insert failed: free page
+		page_free(pg);
 		return ret;
 	}
 	
 	return 0;
 
-	panic("sys_page_alloc not implemented");
+	//panic("sys_page_alloc not implemented");
 }
 
 // Map the page of memory at 'srcva' in srcenvid's address space
@@ -255,7 +258,53 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	//   check the current permissions on the page.
 
 	// LAB 4: Your code here.
-	panic("sys_page_map not implemented");
+
+	struct Env *srcenv;
+	struct Env *dstenv;
+	struct PageInfo *pg;
+	pte_t *pte;
+
+	// Check: srcenvid and/or dstenvid doesn't currently exist,
+	// or the caller doesn't have permission to change one of them.
+	if((envid2env(srcenvid, &srcenv, 1)) < 0){
+		return -E_BAD_ENV; // ret E_BAD_ENV
+	}
+	else if((envid2env(srcenvid, &dstenv, 1)) < 0){
+		return -E_BAD_ENV; // ret E_BAD_ENV
+	}
+
+	// Check: srcva >= UTOP or srcva is not page-aligned,
+	// or dstva >= UTOP or dstva is not page-aligned.
+	if(((uintptr_t)srcva >= UTOP || ((uintptr_t)srcva % PGSIZE) != 0) ||
+	((uintptr_t)dstva >= UTOP || ((uintptr_t)dstva % PGSIZE) != 0)){
+		return -E_INVAL;
+	}
+
+	// Check: if perm is inappropriate (see sys_page_alloc).
+	// PTE_U & PTE_P set & and only PTE_SYSCALL bits are set
+	// LLMPROMPT: Check if PTE_U and PTE_P are set properly
+	if(((perm & (PTE_U | PTE_P)) != (PTE_U | PTE_P)) || (perm & ~PTE_SYSCALL)){
+		return -E_INVAL;
+	}	
+
+	// Check: srcva is not mapped in srcenvid's address space
+	pg = page_lookup(srcenv->env_pgdir, srcva, &pte);
+	if(pg == NULL){
+		return -E_INVAL;
+	}
+
+	// Check: (perm & PTE_W), but srcva is read-only in srcenvid's
+	if((perm & PTE_W) && !(*pte & PTE_W)){
+		return -E_INVAL;
+	}
+
+	// Check: there's no memory to allocate any necessary page tables
+	if(page_insert(dstenv->env_pgdir, pg, dstva, perm) < 0){
+		return -E_NO_MEM;
+	}
+
+	return 0;
+	// panic("sys_page_map not implemented");
 }
 
 // Unmap the page of memory at 'va' in the address space of 'envid'.
@@ -269,9 +318,27 @@ static int
 sys_page_unmap(envid_t envid, void *va)
 {
 	// Hint: This function is a wrapper around page_remove().
-
 	// LAB 4: Your code here.
-	panic("sys_page_unmap not implemented");
+
+	struct Env *env;
+
+	// Check: environment envid doesn't currently exist,
+	// or the caller doesn't have permission to change envid.
+	if((envid2env(envid, &env, 1)) < 0){
+		return -E_BAD_ENV;
+	}
+
+	// Check: va >= UTOP, or va is not page-aligned.
+	if((uintptr_t)va >= UTOP || ((uintptr_t)va % PGSIZE) != 0){
+		return -E_INVAL;
+	}
+
+	// Unmap the page of memory at 'va' in the address space of 'envid'.
+	page_remove(env->env_pgdir, va);
+
+	// If no page is mapped, the function silently succeeds.
+	return 0;
+	// panic("sys_page_unmap not implemented");
 }
 
 // Try to send 'value' to the target env 'envid'.
