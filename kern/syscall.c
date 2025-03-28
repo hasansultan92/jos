@@ -149,11 +149,16 @@ sys_env_set_pgfault_upcall(envid_t envid, void *func)
 {
 	// LAB 4: Your code here.
 	struct Env *e;
-	int returnValue = envid2env(envid,&e, 1);
-	if (returnValue < 0){ 
-		// e should be NULL
+	int ret = envid2env(envid,&e, 1);
+	if (ret < 0){ 
 		return -E_BAD_ENV;
 	}
+
+	if(func == NULL){
+		return -E_INVAL; // invalid pointer
+	}
+
+	// set pgfault upcall function
 	e->env_pgfault_upcall = func;
 	return 0;
 }

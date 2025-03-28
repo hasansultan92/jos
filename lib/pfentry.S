@@ -66,49 +66,38 @@ _pgfault_upcall:
 	//
 	// LAB 4: Your code here.
 
-	// Trap-time eip (UTF+40)
-	movl 0x28(%esp), %eax
 
-	// Trap-time esp (UTF+48)
-	movl 0x30(%esp), %ebx
+	movl 0x40(%esp), %eax 	// Get trap-time eip from UTF
+	movl 0x48(%esp), %ebx	// Get trap-time esp from UTF
 
-	// Push the trap-time %eip onto the *trap-time* stack!
-	subl $4, %ebx 		// reserve space 
-	movl %eax, (%ebx)	// store trap-time eip -> trap-time stack
+							// Push the trap-time %eip onto the *trap-time* stack!
+	subl $0x4, %ebx 		// reserve space 
+	movl %eax, (%ebx)		// store trap-time eip -> trap-time stack
+
+	movl %ebx, 0x40(%esp)	// Store in new trap-time esp (pointing to eip)
 
 	// Restore the trap-time registers.  After you do this, you
 	// can no longer modify any general-purpose registers.
 	// LAB 4: Your code here.
 
-	// Restore:
-	movl 0x08(%esp), %edi 	// edi
-	movl 0x0c(%esp), %esi 	// esi
-	movl 0x10(%esp), %ebp 	// ebp
-	movl 0x14(%esp), %ebx 	// ebx
-	movl 0x18(%esp), %edx 	// edx
-	movl 0x1c(%esp), %ecx 	// ecx
-	movl 0x20(%esp), %ecx 	// eax
-	
-
+	addl $0x8, %esp 		// mov esp to 8
+	popal 					// pop all registers
 
 	// Restore eflags from the stack.  After you do this, you can
 	// no longer use arithmetic operations or anything else that
 	// modifies eflags.
 	// LAB 4: Your code here.
 
-	// Save new esp to the utf_esp slot (temp)
-	movl %ebx, 0x30(%esp)
-
-	// Restore eflags
-	addl $8, %esp	// skipping utf_fault_va & utf_err
-	popfl			// restore eflags
+	addl $0x8, %esp			// Skip utf_fault_va & utf_err
+	popfl					// Restore eflags
 
 	// Switch back to the adjusted trap-time stack.
 	// LAB 4: Your code here.
 
-	popl %edx	// skip eip
-	popl %esp	// load new trap-time esp (w/ eip)
+	popl %eax				// Skip trap-time eip
+	popl %esp				// load new trap-time esp (w/ eip)
 
 	// Return to re-execute the instruction that faulted.
 	// LAB 4: Your code here.
-	ret // return eip value
+
+	ret 					// return eip value
