@@ -67,20 +67,19 @@ _pgfault_upcall:
 	// LAB 4: Your code here.
 
 
-	movl 0x40(%esp), %eax 	// Get trap-time eip from UTF
-	movl 0x48(%esp), %ebx	// Get trap-time esp from UTF
+	mov 0x40(%esp), %ebp 	// Get trap-time eip from UTF
+	mov 0x48(%esp), %edi	// Get trap-time esp from UTF
 
 							// Push the trap-time %eip onto the *trap-time* stack!
-	subl $0x4, %ebx 		// reserve space 
-	movl %eax, (%ebx)		// store trap-time eip -> trap-time stack
+	sub $4, %ebp 		// reserve space 
+	mov %eax, (%edi)		// store trap-time eip -> trap-time stack
 
-	movl %ebx, 0x40(%esp)	// Store in new trap-time esp (pointing to eip)
 
 	// Restore the trap-time registers.  After you do this, you
 	// can no longer modify any general-purpose registers.
 	// LAB 4: Your code here.
 
-	addl $0x8, %esp 		// mov esp to 8
+	add $8, %esp 		// mov esp to 8
 	popal 					// pop all registers
 
 	// Restore eflags from the stack.  After you do this, you can
@@ -88,14 +87,15 @@ _pgfault_upcall:
 	// modifies eflags.
 	// LAB 4: Your code here.
 
-	addl $0x8, %esp			// Skip utf_fault_va & utf_err
-	popfl					// Restore eflags
+	add $4, %esp			// Skip utf_fault_va & utf_err
+	popf					// Restore eflags
 
 	// Switch back to the adjusted trap-time stack.
 	// LAB 4: Your code here.
 
-	popl %eax				// Skip trap-time eip
-	popl %esp				// load new trap-time esp (w/ eip)
+	// $4, %esp			// move stack pointer by 4
+	mov (%esp), %esp
+	lea -4(%esp), %esp
 
 	// Return to re-execute the instruction that faulted.
 	// LAB 4: Your code here.

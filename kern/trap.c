@@ -407,7 +407,6 @@ page_fault_handler(struct Trapframe *tf)
 		struct UTrapframe *utf = NULL;;
 
 		// TODO: JULIANNE 
-
 		// Fill in UTrapframe:
 		utf->utf_fault_va = fault_va;
 		utf->utf_err = tf->tf_err;
@@ -416,8 +415,10 @@ page_fault_handler(struct Trapframe *tf)
 		utf->utf_eflags = tf->tf_eflags;
 		utf->utf_esp = tf->tf_esp;
 
+
 		// Check if already on the exception stack
-		if((UXSTACKTOP - PGSIZE <= ROUNDUP(tf->tf_esp, PGSIZE)) && (tf->tf_esp < UXSTACKTOP)){
+		// if((UXSTACKTOP - PGSIZE <= ROUNDUP(tf->tf_esp, PGSIZE)) && (tf->tf_esp < UXSTACKTOP)){
+		if(ROUNDUP(tf->tf_esp, PGSIZE) == UXSTACKTOP){
 			// Recursive case
 			// utf = (struct UTrapframe *)(tf->tf_esp - sizeof(struct UTrapframe) - 4);
 			tf->tf_esp -= 4;
@@ -430,15 +431,15 @@ page_fault_handler(struct Trapframe *tf)
 
 		tf->tf_esp -= sizeof(struct UTrapframe);
 
-		// user_mem_assert(curenv, (uintptr_t)tf->tf_esp, sizeof(struct UTrapframe), PTE_W | PTE_P | PTE_U);
-		user_mem_assert(curenv, (void*)tf->tf_esp, sizeof(struct UTrapframe), PTE_W | PTE_P | PTE_U);
-
 		// Modify env's trapframe: return upcall handler
 		tf->tf_eip = (uintptr_t)curenv->env_pgfault_upcall;
 		tf->tf_esp = (uintptr_t)utf;
 
+		// user_mem_assert(curenv, (uintptr_t)tf->tf_esp, sizeof(struct UTrapframe), PTE_W | PTE_P | PTE_U);
+		user_mem_assert(curenv, (void*)tf->tf_esp, sizeof(struct UTrapframe), PTE_P| PTE_W | PTE_U);
+
 		// continue in user mode
-		env_run(curenv);	
+		env_run(curenv);
 	} else{
 		// No page fault handler registered
 		// Destroy the environment that caused the fault.

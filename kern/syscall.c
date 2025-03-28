@@ -267,7 +267,9 @@ sys_page_map(envid_t srcenvid, void *srcva,
 	struct Env *srcenv;
 	struct Env *dstenv;
 	struct PageInfo *pg;
-	pte_t *pte;
+	struct PageInfo *dstpg;
+	pte_t *pte = NULL;
+	pte_t *dst_pte = NULL;
 	int ret;
 
 	// Check: srcenvid and/or dstenvid doesn't currently exist,
@@ -304,7 +306,15 @@ sys_page_map(envid_t srcenvid, void *srcva,
 		return -E_INVAL;
 	}
 
+
 	// Check: there's no memory to allocate any necessary page tables
+	dstpg = page_lookup(dstenv->env_pgdir, dstva, &dst_pte);
+	if(dstpg == NULL){
+		if(pgdir_walk(dstenv->env_pgdir, dstva, 1) == NULL){
+			return -E_INVAL;
+		}
+	}
+
 	if(page_insert(dstenv->env_pgdir, pg, dstva, perm) < 0){
 		return -E_NO_MEM;
 	}
@@ -332,7 +342,7 @@ sys_page_unmap(envid_t envid, void *va)
 	// Check: environment envid doesn't currently exist,
 	// or the caller doesn't have permission to change envid.
 	if((ret = envid2env(envid, &env, 1)) < 0){
-		return ret; // ret = -E_BAD_ENV;
+		return -E_BAD_ENV; // ret = -E_BAD_ENV;
 	}
 
 	// Check: va >= UTOP, or va is not page-aligned.
