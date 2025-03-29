@@ -82,6 +82,25 @@ TRAPHANDLER(t_gpflt, T_GPFLT);				// general protection
 TRAPHANDLER(t_pgflt, T_PGFLT);				// page fault
 TRAPHANDLER(t_align, T_ALIGN);			    // alignment check
 
+
+// Lab 4: Exercise 13 
+TRAPHANDLER(t_irq_timer, IRQ_OFFSET + IRQ_TIMER);       // 32 + 0
+TRAPHANDLER(t_irq_kbd, IRQ_OFFSET + IRQ_KBD);           // 32 + 1
+TRAPHANDLER(t_irq_2, IRQ_OFFSET + 2);                   // 32 + 2
+TRAPHANDLER(t_irq_3, IRQ_OFFSET + 3);                   // 32 + 3
+TRAPHANDLER(t_irq_serial, IRQ_OFFSET + IRQ_SERIAL);     // 32 + 4
+TRAPHANDLER(t_irq_5, IRQ_OFFSET + 5);                   // 32 + 5
+TRAPHANDLER(t_irq_6, IRQ_OFFSET + 6);                   // 32 + 6
+TRAPHANDLER(t_irq_spurious, IRQ_OFFSET + IRQ_SPURIOUS); // 32 + 7
+TRAPHANDLER(t_irq_8, IRQ_OFFSET + 8);                   // 32 + 8
+TRAPHANDLER(t_irq_9, IRQ_OFFSET + 9);                   // 32 + 9
+TRAPHANDLER(t_irq_10, IRQ_OFFSET + 10);                 // 32 + 10
+TRAPHANDLER(t_irq_11, IRQ_OFFSET + 11);                 // 32 + 11
+TRAPHANDLER(t_irq_12, IRQ_OFFSET + 12);                 // 32 + 12
+TRAPHANDLER(t_irq_13, IRQ_OFFSET + 13);                 // 32 + 13
+TRAPHANDLER(t_irq_ide, IRQ_OFFSET + t_irq_ide);         // 32 + 14
+TRAPHANDLER(t_irq_15, IRQ_OFFSET + t_irq_15);           // 32 + 15
+
 /*
  * Lab 3: Your code here for _alltraps
  */
