@@ -160,6 +160,10 @@ sys_env_set_pgfault_upcall(envid_t envid, void *func)
 
 	// set pgfault upcall function
 	e->env_pgfault_upcall = func;
+
+	// TODO: DEBUG
+	cprintf("set_pgfault_handler: Allocating exception stack at %p\n", (void *)(UXSTACKTOP - PGSIZE));
+	cprintf("set_pgfault_handler: Setting upcall to %p\n", e->env_pgfault_upcall );
 	return 0;
 }
 
@@ -455,6 +459,8 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
 		return sys_page_map(a1, (void*)a2, a3, (void *)a4, a5);
 	case SYS_page_unmap:
 		return sys_page_unmap(a1, (void*)a2);
+	case SYS_env_set_pgfault_upcall:
+		return sys_env_set_pgfault_upcall((envid_t)a1, (void *)a2);
 	default:
 		return -E_INVAL;
 	}

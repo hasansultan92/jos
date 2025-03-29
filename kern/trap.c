@@ -286,13 +286,14 @@ trap_dispatch(struct Trapframe *tf)
 	// Handle clock interrupts. Don't forget to acknowledge the
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
+	if(tf->tf_trapno == (IRQ_OFFSET + IRQ_TIMER)){
+		lapic_eoi();
+		sched_yield();
+		return;
+	}
 
 	// Handle interrupts and traps
 	switch(tf->tf_trapno){
-		case (IRQ_OFFSET):		// + IRQ_TIMER // Handle Clock Interrupts
-			lapic_eoi();
-			sched_yield();
-			return;
 		// Lab 3:
 		case T_PGFLT:
 			page_fault_handler(tf);
@@ -443,16 +444,16 @@ page_fault_handler(struct Trapframe *tf)
 	// UXSTACKTOP), then branch to curenv->env_pgfault_upcall.
 	// Call the environment's page fault upcall
 	if(curenv->env_pgfault_upcall){
-		struct UTrapframe *utf = NULL;;
+		struct UTrapframe utf;
 
 		// TODO: JULIANNE 
 		// Fill in UTrapframe:
-		utf->utf_fault_va = fault_va;
-		utf->utf_err = tf->tf_err;
-		utf->utf_regs = tf->tf_regs;
-		utf->utf_eip = tf->tf_eip;
-		utf->utf_eflags = tf->tf_eflags;
-		utf->utf_esp = tf->tf_esp;
+		utf.utf_fault_va = fault_va;
+		utf.utf_err = tf->tf_err;		
+		utf.utf_regs = tf->tf_regs;
+		utf.utf_eip = tf->tf_eip;
+		utf.utf_eflags = tf->tf_eflags;
+		utf.utf_esp = tf->tf_esp;
 
 
 		// Check if already on the exception stack
@@ -472,7 +473,7 @@ page_fault_handler(struct Trapframe *tf)
 
 		// Modify env's trapframe: return upcall handler
 		tf->tf_eip = (uintptr_t)curenv->env_pgfault_upcall;
-		tf->tf_esp = (uintptr_t)utf;
+		*((struct UTrapframe *) tf->tf_esp) = utf;
 
 		// user_mem_assert(curenv, (uintptr_t)tf->tf_esp, sizeof(struct UTrapframe), PTE_W | PTE_P | PTE_U);
 		user_mem_assert(curenv, (void*)tf->tf_esp, sizeof(struct UTrapframe), PTE_P| PTE_W | PTE_U);
