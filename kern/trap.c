@@ -404,8 +404,6 @@ page_fault_handler(struct Trapframe *tf)
 		panic("Kernal-Mode Page Fault");
 	}
 
-
-
 	// We've already handled kernel-mode exceptions, so if we get here,
 	// the page fault happened in user mode.
 
@@ -455,28 +453,35 @@ page_fault_handler(struct Trapframe *tf)
 		utf.utf_eflags = tf->tf_eflags;
 		utf.utf_esp = tf->tf_esp;
 
+		uintptr_t utf_esp;
 
 		// Check if already on the exception stack
-		// if((UXSTACKTOP - PGSIZE <= ROUNDUP(tf->tf_esp, PGSIZE)) && (tf->tf_esp < UXSTACKTOP)){
-		if(ROUNDUP(tf->tf_esp, PGSIZE) == UXSTACKTOP){
+		if((UXSTACKTOP - PGSIZE <= ROUNDUP(tf->tf_esp, PGSIZE)) && (tf->tf_esp < UXSTACKTOP)){
+		// if(ROUNDUP(tf->tf_esp, PGSIZE) == UXSTACKTOP){
 			// Recursive case
 			// utf = (struct UTrapframe *)(tf->tf_esp - sizeof(struct UTrapframe) - 4);
-			tf->tf_esp -= 4;
+			// tf->tf_esp -= 4;
+			utf_esp = tf->tf_esp - sizeof(struct UTrapframe) -  4;
 
 		} else{
 			// Non-recursive case
 			// utf = (struct UTrapframe *)(UXSTACKTOP - sizeof(struct UTrapframe));
-			tf->tf_esp = UXSTACKTOP;
+			// tf->tf_esp = UXSTACKTOP;
+			utf_esp = UXSTACKTOP - sizeof(struct UTrapframe);
 		}
 
-		tf->tf_esp -= sizeof(struct UTrapframe);
+		// tf->tf_esp -= sizeof(struct UTrapframe);
 
 		// Modify env's trapframe: return upcall handler
-		tf->tf_eip = (uintptr_t)curenv->env_pgfault_upcall;
-		*((struct UTrapframe *) tf->tf_esp) = utf;
+		// tf->tf_eip = (uintptr_t)curenv->env_pgfault_upcall;
+		// *((struct UTrapframe *) tf->tf_esp) = utf;
 
-		// user_mem_assert(curenv, (uintptr_t)tf->tf_esp, sizeof(struct UTrapframe), PTE_W | PTE_P | PTE_U);
-		user_mem_assert(curenv, (void*)tf->tf_esp, sizeof(struct UTrapframe), PTE_P| PTE_W | PTE_U);
+		user_mem_assert(curenv, (void*)utf_esp, sizeof(struct UTrapframe), PTE_P| PTE_W | PTE_U);
+
+		*((struct UTrapframe *)utf_esp) = utf;
+
+		tf->tf_esp = utf_esp;
+		tf->tf_eip = (uintptr_t)curenv->env_pgfault_upcall;
 
 		// continue in user mode
 		env_run(curenv);
