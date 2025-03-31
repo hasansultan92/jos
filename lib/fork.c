@@ -84,8 +84,8 @@ pgfault(struct UTrapframe *utf)
     if (!(err & FEC_WR)) {
         panic("pgfault: not a write (error code %08x)", err);
     }
-    if (!(uvpt[PTX(addr)] & PTE_COW)) {
-        panic("pgfault: not COW (PTE %08x)", uvpt[PTX(addr)]);
+    if (!(uvpt[PGNUM(addr)] & PTE_COW)) {
+        panic("pgfault: not COW ");
     }
 
     // Allocate new page at temporary location
@@ -185,16 +185,28 @@ fork(void)
 		thisenv = &envs[ENVX(sys_getenvid())];
 		return 0;
 	}
-
-    for (uintptr_t addr = 0; addr < UTOP; addr += PGSIZE) {
-        if ((uvpd[PDX(addr)] & (PTE_P)) && 
-            (uvpt[PTX(addr)] & (PTE_P)) &&
-            (addr != (UXSTACKTOP - PGSIZE))) {  // Skip exception stack
-                if (duppage(envid, PTX(addr)) < 0) {
-                panic("error");
+    int pageNumber = 0;
+    uint32_t pn_uxstacktop = (UXSTACKTOP >> PGSHIFT) -1;
+    while (pageNumber < (UXSTACKTOP / PGSIZE)) {
+        if ((uvpd[PDX(pageNumber << 12)] & (PTE_P)) && 
+            (uvpt[pageNumber] & (PTE_P)) &&
+                (pageNumber != pn_uxstacktop)) {
+                cprintf("%s: pageNumber: %d, va %08x\n", __func__, pageNumber, uvpt[pageNumber]);
+                if (duppage(envid, pageNumber) < 0) {
+                    panic("error");
+                }
             }
-        }
+            pageNumber++;
     }
+    // for (uintptr_t addr = 0; addr < UTOP; addr += PGSIZE) {
+    //     if ((uvpd[PDX(addr)] & (PTE_P)) && 
+    //         (uvpt[PTX(addr)] & (PTE_P)) &&
+    //         (addr != (UXSTACKTOP - PGSIZE))) {  // Skip exception stack
+    //             if (duppage(envid, PGNUM(addr)) < 0) {
+    //             panic("error");
+    //         }
+    //     }
+    // }
 
 	// Allocate new exception stack
 	if ((r = sys_page_alloc(envid, (void*)(UXSTACKTOP-PGSIZE), PTE_U|PTE_P|PTE_W)) < 0){
