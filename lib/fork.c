@@ -32,6 +32,16 @@ pgfault(struct UTrapframe *utf)
 	//   (see <inc/memlayout.h>).
 
 	// LAB 4: Your code here.
+    // TODO
+    // if(!(err & FEC_WR)){
+    //     panic("pgfault: not a write (error code %08x)", err);
+    // }
+
+    // // PTE for fault addr
+    // addr = ROUNDDOWN(addr, PGSIZE);
+    // if(!(uvpt[PGNUM(addr)] & PTE_COW)){
+    //     panic("pgfault: not COW (error code %08x)", err);
+    // }
 
 	// Allocate a new page, map it at a temporary location (PFTEMP),
 	// copy the data from the old page to the new page, then move the new
@@ -40,6 +50,25 @@ pgfault(struct UTrapframe *utf)
 	//   You should make three system calls.
 
 	// LAB 4: Your code here.
+    // TODO
+
+    // // Allocate
+    // if((r = sys_page_alloc(0, PFTEMP, PTE_P| PTE_U| PTE_W)) < 0){
+    //     panic("pgfault: sys_page_alloc: %e)", r);
+    // }
+
+    // // copy 
+    // memmove(PFTEMP, addr, PGSIZE);
+
+    // // Remap page @ faulting addr
+    // if((r = sys_page_map(0, PFTEMP, 0, addr, PTE_P | PTE_U | PTE_W)) < 0){
+    //     panic("pgfault: sys_mape_map: %e)", r);
+    // }
+
+    // // Unmap PFTEMP
+    // if((r = sys_page_unmap(0, PFTEMP)) < 0){
+    //     panic("pgfault: sys_page_unmap: %e", r);
+    // }
 
     // // Check if fault is a write and page is COW
     // cprintf("\n==== PAGE FAULT ====\n");
@@ -102,20 +131,21 @@ duppage(envid_t envid, unsigned pn)
         panic("duppage: page not present");
 	}
     
-    if (uvpt[pn] & PTE_W || uvpt[pn] & PTE_COW) {
+    // if (uvpt[pn] & PTE_W || uvpt[pn] & PTE_COW) {
+    if (uvpt[pn] & (PTE_W|PTE_COW)) {
         // Map COW in child
         if ((r = sys_page_map(0, addr, envid, addr, PTE_COW|PTE_U|PTE_P)) < 0){
-			cprintf("mapping failed\n");
+			// cprintf("mapping failed\n");
             return r;
 		}
         // Remap COW in parent
         if ((r = sys_page_map(0, addr, 0, addr, PTE_COW|PTE_U|PTE_P)) < 0){
-			cprintf("mapping failed 2nd\n");
+			// cprintf("mapping failed 2nd\n");
             return r;
 		}
     } else {
         // Map read-only pages directly
-		cprintf("I am in read-only pages here\n");
+		// cprintf("I am in read-only pages here\n");
         if ((r = sys_page_map(0, addr, envid, addr, PTE_U|PTE_P)) < 0) {
             return r;}
     }
