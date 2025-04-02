@@ -1,7 +1,5 @@
 /* See COPYRIGHT for copyright information. */
 
-#include "inc/memlayout.h"
-#include "inc/x86.h"
 #include <inc/stdio.h>
 #include <inc/string.h>
 #include <inc/assert.h>
@@ -19,20 +17,6 @@
 
 static void boot_aps(void);
 
-extern void sysenter_handler(void);
-void
-sysenter_setup(void)
-{
-	uint32_t first32 = (uint32_t) GD_KT & 0xFFFFFFFF;
-	uint32_t last32 = (uint64_t) GD_KT >> 32;
-	wrmsr(first32, last32, MSR_IA32_SYSENTER_CS);
-	first32 = (uint32_t) (uintptr_t *) sysenter_handler & 0xFFFFFFFF;
-	last32 = (uint32_t)((uint64_t) (uintptr_t) sysenter_handler >> 32);
-    wrmsr(first32, last32, MSR_IA32_SYSENTER_EIP);
-	first32 = (uint32_t) KSTACKTOP & 0xFFFFFFFF;
-	last32 = (uint64_t) KSTACKTOP >> 32;
-    wrmsr(first32, last32, MSR_IA32_SYSENTER_ESP);
-}
 
 void
 i386_init(void)
@@ -49,7 +33,7 @@ i386_init(void)
 	// Lab 3 user environment initialization functions
 	env_init();
 	trap_init();
-	sysenter_setup();
+	//sysenter_setup();
 
 	// Lab 4 multiprocessor initialization functions
 	mp_init();
