@@ -67,6 +67,7 @@ endif
 GDBPORT	:= $(shell expr `id -u` % 5000 + 25000)
 
 CC	:= $(GCCPREFIX)gcc -pipe
+GDB	:= $(GCCPREFIX)gdb
 AS	:= $(GCCPREFIX)as
 AR	:= $(GCCPREFIX)ar
 LD	:= $(GCCPREFIX)ld
@@ -87,7 +88,7 @@ CFLAGS := $(CFLAGS) $(DEFS) $(LABDEFS) -O1 -fno-builtin -I$(TOP) -MD
 CFLAGS += -fno-omit-frame-pointer
 CFLAGS += -std=gnu99
 CFLAGS += -static
-CFLAGS += -Wall -Wno-format -Wno-unused -Werror -m32 -gstabs
+CFLAGS += -Wall -Wno-format -Wno-unused -Werror -gstabs -m32
 # -fno-tree-ch prevented gcc from sometimes reordering read_ebp() before
 # mon_backtrace()'s function prologue on gcc version: (Debian 4.7.2-5) 4.7.2
 CFLAGS += -fno-tree-ch
@@ -120,8 +121,8 @@ all:
 	   $(OBJDIR)/lib/%.o $(OBJDIR)/fs/%.o $(OBJDIR)/net/%.o \
 	   $(OBJDIR)/user/%.o
 
-KERN_CFLAGS := $(CFLAGS) -DJOS_KERNEL
-USER_CFLAGS := $(CFLAGS) -DJOS_USER
+KERN_CFLAGS := $(CFLAGS) -DJOS_KERNEL -gstabs
+USER_CFLAGS := $(CFLAGS) -DJOS_USER -gstabs
 
 # Update .vars.X if variable X has changed since the last make run.
 #
@@ -137,6 +138,8 @@ $(OBJDIR)/.vars.%: FORCE
 # Include Makefrags for subdirectories
 include boot/Makefrag
 include kern/Makefrag
+include lib/Makefrag
+include user/Makefrag
 
 
 QEMUOPTS = -drive file=$(OBJDIR)/kern/kernel.img,index=0,media=disk,format=raw -serial mon:stdio -gdb tcp::$(GDBPORT)
@@ -148,12 +151,12 @@ QEMUOPTS += $(QEMUEXTRA)
 	sed "s/localhost:1234/localhost:$(GDBPORT)/" < $^ > $@
 
 gdb:
-	gdb -n -x .gdbinit
+	$(GDB) -n -x .gdbinit
 
 pre-qemu: .gdbinit
 
 qemu: $(IMAGES) pre-qemu
-	$(QEMU) -nographic $(QEMUOPTS)
+	$(QEMU) $(QEMUOPTS)
 
 qemu-nox: $(IMAGES) pre-qemu
 	@echo "***"
@@ -163,13 +166,13 @@ qemu-nox: $(IMAGES) pre-qemu
 
 qemu-gdb: $(IMAGES) pre-qemu
 	@echo "***"
-	@echo "*** Now run 'gdb'." 1>&2
+	@echo "*** Now run 'make gdb'." 1>&2
 	@echo "***"
-	$(QEMU) -nographic $(QEMUOPTS) -S
+	$(QEMU) $(QEMUOPTS) -S
 
 qemu-nox-gdb: $(IMAGES) pre-qemu
 	@echo "***"
-	@echo "*** Now run 'gdb'." 1>&2
+	@echo "*** Now run 'make gdb'." 1>&2
 	@echo "***"
 	$(QEMU) -nographic $(QEMUOPTS) -S
 
@@ -221,9 +224,14 @@ git-handin: handin-check
 
 WEBSUB := https://6828.scripts.mit.edu/2018/handin.py
 
-handin: tarball-pref
+handin: tarball-pref myapi.key
 	@SUF=$(LAB); \
-	echo "Please submit lab$(LAB)-handin.tar.gz to Brightspace for your group.";\
+	test -f .suf && SUF=`cat .suf`; \
+	curl -f -F file=@lab$$SUF-handin.tar.gz -F key=\<myapi.key $(WEBSUB)/upload \
+	    > /dev/null || { \
+		echo ; \
+		echo Submit seems to have failed.; \
+		echo Please go to $(WEBSUB)/ and upload the tarball manually.; }
 
 handin-check:
 	@if ! test -d .git; then \
@@ -251,8 +259,21 @@ UPSTREAM := $(shell git remote -v | grep "pdos.csail.mit.edu/6.828/2018/jos.git 
 
 tarball-pref: handin-check
 	@SUF=$(LAB); \
+	if test $(LAB) -eq 3 -o $(LAB) -eq 4; then \
+		read -p "Which part would you like to submit? [a, b, c (c for lab 4 only)]" p; \
+		if test "$$p" != a -a "$$p" != b; then \
+			if test ! $(LAB) -eq 4 -o ! "$$p" = c; then \
+				echo "Bad part \"$$p\""; \
+				exit 1; \
+			fi; \
+		fi; \
+		SUF="$(LAB)$$p"; \
+		echo $$SUF > .suf; \
+	else \
+		rm -f .suf; \
+	fi; \
 	git archive --format=tar HEAD > lab$$SUF-handin.tar; \
-	git diff origin/lab$(LAB) > /tmp/lab$$SUF-diff.patch; \
+	git diff $(UPSTREAM)/lab$(LAB) > /tmp/lab$$SUF-diff.patch; \
 	tar -rf lab$$SUF-handin.tar /tmp/lab$$SUF-diff.patch; \
 	gzip -c lab$$SUF-handin.tar > lab$$SUF-handin.tar.gz; \
 	rm lab$$SUF-handin.tar; \
@@ -279,6 +300,22 @@ myapi.key:
 #handin-prep:
 #	@./handin-prep
 
+# For test runs
+
+prep-%:
+	$(V)$(MAKE) "INIT_CFLAGS=${INIT_CFLAGS} -DTEST=`case $* in *_*) echo $*;; *) echo user_$*;; esac`" $(IMAGES)
+
+run-%-nox-gdb: prep-% pre-qemu
+	$(QEMU) -nographic $(QEMUOPTS) -S
+
+run-%-gdb: prep-% pre-qemu
+	$(QEMU) $(QEMUOPTS) -S
+
+run-%-nox: prep-% pre-qemu
+	$(QEMU) -nographic $(QEMUOPTS)
+
+run-%: prep-% pre-qemu
+	$(QEMU) $(QEMUOPTS)
 
 # This magic automatically generates makefile dependencies
 # for header files included from C source files we compile,

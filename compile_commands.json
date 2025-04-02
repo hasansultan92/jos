@@ -1,0 +1,31 @@
+[
+  {
+    "arguments": [
+      "/usr/bin/gcc",
+      "-pipe",
+      "-nostdinc",
+      "-O1",
+      "-fno-builtin",
+      "-I.",
+      "-fno-omit-frame-pointer",
+      "-std=gnu99",
+      "-Wall",
+      "-Wno-format",
+      "-Wno-unused",
+      "-Werror",
+      "-m32",
+      "-ggdb3",
+      "-fno-tree-ch",
+      "-fno-stack-protector",
+      "-DJOS_KERNEL",
+      "-ggdb3",
+      "-c",
+      "-o",
+      "obj/kern/pmap.o",
+      "kern/pmap.c"
+    ],
+    "directory": "/home/shay/a/hsultan/ECE469",
+    "file": "/home/shay/a/hsultan/ECE469/kern/pmap.c",
+    "output": "/home/shay/a/hsultan/ECE469/obj/kern/pmap.o"
+  }
+]
