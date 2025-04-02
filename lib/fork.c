@@ -4,7 +4,6 @@
 #include "inc/env.h"
 #include "inc/memlayout.h"
 #include "inc/mmu.h"
-#include "inc/stdio.h"
 #include "inc/types.h"
 #include <inc/string.h>
 #include <inc/lib.h>
@@ -12,7 +11,6 @@
 // PTE_COW marks copy-on-write page table entries.
 // It is one of the bits explicitly allocated to user processes (PTE_AVAIL).
 #define PTE_COW		0x800
-extern void _pgfault_upcall(void);
 
 //
 // Custom page fault handler - if faulting page is copy-on-write,
@@ -184,9 +182,9 @@ fork(void)
 		// Should be the child process
 		thisenv = &envs[ENVX(sys_getenvid())];
 		return 0;
-	}
+	} else {
     int pageNumber = 0;
-    uint32_t pn_uxstacktop = (UXSTACKTOP >> PGSHIFT) -1;
+    uint32_t pn_uxstacktop = (UXSTACKTOP >> PGSHIFT);
     while (pageNumber < (UXSTACKTOP / PGSIZE)) {
         if ((uvpd[PDX(pageNumber << 12)] & (PTE_P)) && 
             (uvpt[pageNumber] & (PTE_P)) &&
@@ -197,7 +195,7 @@ fork(void)
                 }
             }
             pageNumber++;
-    }
+    }}
     // for (uintptr_t addr = 0; addr < UTOP; addr += PGSIZE) {
     //     if ((uvpd[PDX(addr)] & (PTE_P)) && 
     //         (uvpt[PTX(addr)] & (PTE_P)) &&
@@ -213,7 +211,7 @@ fork(void)
 		panic("fork: sys_page_alloc for exception stack: %e", r);
     }
     // Set child's page fault upcall
-    if ((r = sys_env_set_pgfault_upcall(envid, _pgfault_upcall)) < 0){
+    if ((r = sys_env_set_pgfault_upcall(envid, thisenv->env_pgfault_upcall)) < 0){
         panic("fork: sys_env_set_pgfault_upcall: %e", r);
     }
 

@@ -86,14 +86,16 @@ _pgfault_upcall:
 	// mov %eax, (%edi)		// store trap-time eip -> trap-time stack
 
 	// ** NEW **
-	mov 48(%esp), %eax		// Get trap-time esp from UTF
-	
-							// Get trap-time eip from UTF
-	sub $4, %eax			// reserve space 
-	mov 40(%esp), %ebx		// trap-time eip
-	mov %ebx, (%eax)		// store trap-time eip -> trap-time stack
+	movl 40(%esp), %ebp		// Get trap-time esp from UTF
+	movl 48(%esp), %edi
 
-	mov %eax, 48(%esp)		// update saved trap-time esp in UTF
+	movl %ebp, -4(%edi)
+	// 						// Get trap-time eip from UTF
+	// sub $4, %eax			// reserve space 
+	// mov 40(%esp), %ebx		// trap-time eip
+	// mov %ebx, (%eax)		// store trap-time eip -> trap-time stack
+
+	// mov %eax, 48(%esp)		// update saved trap-time esp in UTF
 
 
 
@@ -102,7 +104,7 @@ _pgfault_upcall:
 	// LAB 4: Your code here.
 
 	add $8, %esp 			// mov esp to 8
-	popal 					// pop all registers
+	popa 					// pop all registers
 
 	// Restore eflags from the stack.  After you do this, you can
 	// no longer use arithmetic operations or anything else that
@@ -121,9 +123,9 @@ _pgfault_upcall:
 	// lea -4(%esp), %esp
 
 	// ** NEW **
-	pop %esp 			// restore trap-time esp
+	mov (%esp), %esp			// restore trap-time esp
 
 	// Return to re-execute the instruction that faulted.
 	// LAB 4: Your code here.
-
+	lea -4(%esp), %esp
 	ret 					// return eip value

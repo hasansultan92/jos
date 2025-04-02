@@ -1,4 +1,5 @@
 #include "inc/memlayout.h"
+#include "inc/stdio.h"
 #include <inc/mmu.h>
 #include <inc/x86.h>
 #include <inc/assert.h>
@@ -282,7 +283,6 @@ trap_dispatch(struct Trapframe *tf)
 		print_trapframe(tf);
 		return;
 	}
-
 	// Handle clock interrupts. Don't forget to acknowledge the
 	// interrupt using lapic_eoi() before calling the scheduler!
 	// LAB 4: Your code here.
@@ -401,6 +401,7 @@ page_fault_handler(struct Trapframe *tf)
 	// TODO: ASK TA IF WE DO THIS
 	// Check if fault occurred in kernel mode
 	if((tf->tf_cs & 3) == 0){
+		print_trapframe(tf);
 		panic("Kernal-Mode Page Fault");
 	}
 
