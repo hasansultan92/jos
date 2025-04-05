@@ -487,7 +487,7 @@ sys_ipc_recv(void *dstva)
     curenv->env_ipc_recving = 1;
     curenv->env_ipc_dstva = dstva;
     curenv->env_status = ENV_NOT_RUNNABLE;
-    sys_yield();
+    // sys_yield();
 
 	return 0;
 }

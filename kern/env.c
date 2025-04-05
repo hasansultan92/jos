@@ -225,8 +225,10 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 	int r;
 	struct Env *e;
 
-	if (!(e = env_free_list))
+	if (!(e = env_free_list)){
+		cprintf("DEBUG ENV_ALLOC: FAIL LINE 229");
 		return -E_NO_FREE_ENV;
+	}
 
 	// Allocate and set up the page directory for this environment.
 	if ((r = env_setup_vm(e)) < 0)
@@ -267,7 +269,7 @@ env_alloc(struct Env **newenv_store, envid_t parent_id)
 
 	// Enable interrupts while in user mode.
 	// LAB 4: Your code here.
-	e->env_tf.tf_eflags |= FL_IF;  // Exercise 13
+	e->env_tf.tf_eflags = FL_IF;  // Exercise 13
 
 	// Clear the page fault handler until user installs one.
 	e->env_pgfault_upcall = 0;
@@ -534,6 +536,7 @@ env_destroy(struct Env *e)
 		sched_yield();
 	}
 }
+
 
 
 //

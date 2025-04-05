@@ -125,7 +125,8 @@ fork(void)
     envid_t envid = sys_exofork();
 
     if (envid < 0)
-        panic("fork, sys_exofork %e", envid);
+        //panic("fork, sys_exofork %e", envid);
+        return envid;
 
     if (envid == 0) {
         // child
