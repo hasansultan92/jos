@@ -1,0 +1,96 @@
+Lab 2
+
+******************************************************************************
+Exercise 3
+
+Question: Assuming that the following JOS kernel code is correct, what type should variable x have, uintptr_t or physaddr_t?
+mystery_t x;
+char* value = return_a_pointer();
+*value = 10;
+x = (mystery_t) value;
+
+Answer: uintptr_t
+
+******************************************************************************
+Exercise 5
+
+    a. What entries (rows) in the page directory have been filled in at this point? 
+    What addresses do they map and where do they point? In other words, fill out this table as much as possible:
+    +-----+----------------------+----------------------------------------------+
+    |Entry| Base Virtual Address |  Points to (logically)                       |
+    +=====+======================+==============================================+
+    |1023 | 0xffc00000           | Page table for top 4MB of phys memory        |
+    +-----+----------------------+----------------------------------------------+
+    |1022 | 0xff800000           | Page table for 2nd topmost 4MB of phys memory|
+    +-----+----------------------+----------------------------------------------+
+    |0x3bd| 0xef7ff000           | Bottom of Cur. Page Table (User R-)          |
+    +-----+----------------------+----------------------------------------------+
+    |0x3c0| 0xf0000000           | KERNBASE                                     |
+    +-----+----------------------+----------------------------------------------+
+    |0x3bc| 0xef000000           | UPAGES                                       |
+    +-----+----------------------+----------------------------------------------+
+    |2    | 0x00800000           | Empty Memory (*)                             |                                     
+    +-----+----------------------+----------------------------------------------+
+    |1    | 0x00400000           | UTEXT                                        |                                     
+    +-----+----------------------+----------------------------------------------+
+    |0    | 0x00000000           | Empty memory //TODO                          |
+    +-----+----------------------+----------------------------------------------+
+
+    b. We have placed the kernel and user environment in the same address space. 
+    Why will user programs not be able to read or write the kernel’s memory? 
+    What specific mechanisms protect the kernel memory?
+
+    User programs will not be able to read or write the kernel’s memory due to privilege levels
+    and page table protections. The x86 architecture restricts access to system reources and 
+    via ring protection. Execution privileges are divided into four levels. With this setup, 
+    the kernel runs at ring 0 (highest privilege), while user programs run at ring 3 
+    (lowest privilege). Additionally, page table permissions limit access to kernel pages 
+    to only ring 0 (kernel mode). This is done by setting the User/Supervisor bit to 0. 
+    Privelege levels and page table protections isolate the kernel from user programs and 
+    prevent unauthorized memory access.
+
+    c. What is the maximum amount of physical memory that this operating system can support? Why?
+    
+    The maximum physical memory that this operating system can support is 256MB. The operating 
+    system makes use of 32-bit adressing and 4KB pages, so the total addressable space is 4GB
+    (solved for below). However, the KERNBASE (0xf0000000) marks the beginning of kernel space, 
+    which leaves 256MB of contiguous physical memory below it.
+    
+    See calculations below:
+        Total addressable space = [1024 Page tables * (1024 entries / page table) * (4KB/entry)]
+        Total addressable space = 4GB
+    
+        Maximum Physical Memory = Total addressable space - KERNBASE 
+        Maximum Physical Memory = 4GB - 3.75GB
+        Maximum Physical Memory = 0x100000000 − 0xf0000000 
+        Maximum Physical Memory = 0x10000000
+        Maximum Physical Memory = 256MB
+    
+    d. How much space overhead is there for managing memory, if we actually had the maximum amount 
+    of physical memory? How is this overhead broken down?
+    
+    The memory management overhead is approximately 8KB. 
+    
+    Below is how we calculated & brokedown the memory management overhead:
+    Page Directory: 1024 entries * 4B = 4KB
+    Page Tables: 1024 entries * 4B = 4KB
+    Total Overhead: Page Directory + Page Tables = 4KB + 4KB = 8 KB
+
+    Thus, the overhead is composed of the page directory & page tables, which are used to to manage and map 
+    virtual-to-pyhsical memory.
+    
+    e. Revisit the page table setup in kern/entry.S and kern/entrypgdir.c. Immediately after we turn on paging, 
+    EIP is still a low number (a little over 1MB). At what point do we transition to running at an EIP above 
+    KERNBASE? What makes it possible for us to continue executing at a low EIP between when we enable paging 
+    and when we begin running at an EIP above KERNBASE? Why is this transition necessary?
+
+    We transition to to running at an EIP above KERNBASE after paging is enabled. This is occurs on line 67 of entry.s, 
+    in the instructions: "mov $relocated, %eax" and "jmp *%eax". 
+
+    It is possible to continue executing at a low EIP between when we enable paging and when we begin running at an 
+    EIP above KERNBASE beacuse the initial page table identity maps the lower physical memory. 
+    In other words, there is a one-to-one mapping of virtual adresses to physical adresses in the first 4MB.
+
+    This transition is necessary because the kernel runs in the address space above KERNBASE. This ensures the 
+    seperation between kernel and user space. Running in the upper half prevents conflicts with user programs, 
+    makes memory management and mapping simpler, and isolates the kernel space from user processes.
