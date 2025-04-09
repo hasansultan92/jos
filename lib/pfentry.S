@@ -37,7 +37,7 @@ _pgfault_upcall:
 	movl _pgfault_handler, %eax
 	call *%eax
 	addl $4, %esp			// pop function argument
-	
+
 	// Now the C page fault handler has returned and you must return
 	// to the trap time state.
 	// Push trap-time %eip onto the trap-time stack.
@@ -66,66 +66,32 @@ _pgfault_upcall:
 	//
 	// LAB 4: Your code here.
 
-	// LLMPROMPT: What does popal do? Which registers (if any) should we avoid using due to this operation?
-
-	// Carefully choose which registers to use for temporary storage.
-	// %ebp and %edi (and other general-purpose registers) should NOT be used for temporary 
-	// storage before the popal instruction because:
-	// 1. popal restores ALL general-purpose registers (EAX, ECX, EDX, EBX, ESP, EBP, ESI, EDI)
-	//    from the UTrapframe
-	// 2. Any values we store in these registers will be overwritten when popal executes
-	// 3. Instead, we use %eax and %ebx for any operations we need to perform before popal,
-	//    knowing they'll be properly restored later
-
-	// ** OLD **
-	// mov 0x40(%esp), %ebp // Get trap-time eip from UTF
-	// mov 0x48(%esp), %edi	// Get trap-time esp from UTF
-
-							// Push the trap-time %eip onto the *trap-time* stack!
-	// sub $4, %ebp 		// reserve space 
-	// mov %eax, (%edi)		// store trap-time eip -> trap-time stack
-
-	// ** NEW **
-	movl 40(%esp), %ebp		// Get trap-time esp from UTF
-	movl 48(%esp), %edi
-
-	movl %ebp, -4(%edi)
-	// 						// Get trap-time eip from UTF
-	// sub $4, %eax			// reserve space 
-	// mov 40(%esp), %ebx		// trap-time eip
-	// mov %ebx, (%eax)		// store trap-time eip -> trap-time stack
-
-	// mov %eax, 48(%esp)		// update saved trap-time esp in UTF
-
-
+    // load trap-time eip to ebp
+    mov 40(%esp), %ebp
+    // load trap-time esp to edi
+    mov 48(%esp), %edi
+    // push trap-time eip to trap-time esp
+    mov %ebp, -4(%edi)
 
 	// Restore the trap-time registers.  After you do this, you
 	// can no longer modify any general-purpose registers.
 	// LAB 4: Your code here.
-
-	add $8, %esp 			// mov esp to 8
-	popa 					// pop all registers
+    add $8, %esp
+    popa
 
 	// Restore eflags from the stack.  After you do this, you can
 	// no longer use arithmetic operations or anything else that
 	// modifies eflags.
 	// LAB 4: Your code here.
+    add $0x4, %esp
+    popf
 
-	add $4, %esp			// Skip utf_fault_va & utf_err
-	popf					// Restore eflags
 
 	// Switch back to the adjusted trap-time stack.
 	// LAB 4: Your code here.
-
-	// ** OLD **
-	// $4, %esp			// move stack pointer by 4
-	// mov (%esp), %esp
-	// lea -4(%esp), %esp
-
-	// ** NEW **
-	mov (%esp), %esp			// restore trap-time esp
+    mov (%esp), %esp
 
 	// Return to re-execute the instruction that faulted.
 	// LAB 4: Your code here.
-	lea -4(%esp), %esp
-	ret 					// return eip value
+    lea -4(%esp), %esp
+    ret

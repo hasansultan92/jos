@@ -51,7 +51,7 @@
 TRAPHANDLER_NOEC(t_divide, T_DIVIDE);    // 0
 TRAPHANDLER_NOEC(t_debug, T_DEBUG);      // 1
 TRAPHANDLER_NOEC(t_nmi, T_NMI);          // 2
-TRAPHANDLER_NOEC(t_bkrpt, T_BRKPT);      // 3
+TRAPHANDLER_NOEC(t_brkpt, T_BRKPT);      // 3
 TRAPHANDLER_NOEC(t_oflow, T_OFLOW);      // 4
 TRAPHANDLER_NOEC(t_bound, T_BOUND);      // 5
 TRAPHANDLER_NOEC(t_illop, T_ILLOP);      // 6
@@ -63,7 +63,6 @@ TRAPHANDLER(t_tss, T_TSS);          // 10
 TRAPHANDLER(t_segnp, T_SEGNP);      // 11
 TRAPHANDLER(t_stack, T_STACK);      // 12
 TRAPHANDLER(t_gpflt, T_GPFLT);      // 13
-TRAPHANDLER_NOEC(t_default, T_DEFAULT);      // catchall
 TRAPHANDLER(t_pgflt, T_PGFLT);      // 14
 
 TRAPHANDLER_NOEC(t_fperr, T_FPERR);      // 16

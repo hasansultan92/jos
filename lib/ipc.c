@@ -23,24 +23,21 @@ int32_t
 ipc_recv(envid_t *from_env_store, void *pg, int *perm_store)
 {
 	// LAB 4: Your code here.
-    void *dstva = pg;
-    if (pg == NULL) {
-        dstva = (void*)UTOP; // limit so it should fail
-    }
-    int ret = sys_ipc_recv(dstva);
-    if (from_env_store != NULL) {
-        *from_env_store = (ret == 0) ? thisenv->env_ipc_from : 0;
-    }
-
-    if (perm_store != NULL) {
-        *perm_store = (ret == 0) ? thisenv->env_ipc_perm : 0; // this might be wrong
-    }
-
-    if (ret == 0) {
-        return thisenv->env_ipc_value;
-    } else {
+	//panic("ipc_recv not implemented");
+    int32_t ret;
+    if ( (ret = sys_ipc_recv(pg == NULL ? (void*)-1 : pg)) < 0) {
         return ret;
     }
+
+    if (perm_store) {
+        *perm_store = thisenv->env_ipc_perm;
+    }
+
+    if (from_env_store) {
+        *from_env_store = thisenv->env_ipc_from;
+    }
+
+	return thisenv->env_ipc_value;
 }
 
 // Send 'val' (and 'pg' with 'perm', if 'pg' is nonnull) to 'toenv'.
@@ -55,27 +52,27 @@ void
 ipc_send(envid_t to_env, uint32_t val, void *pg, int perm)
 {
 	// LAB 4: Your code here.
-    void *srcva = pg;
-    if (pg == NULL) {
-        srcva = (void*)UTOP;
-    }
+	//panic("ipc_send not implemented");
+    int32_t ret = -E_IPC_NOT_RECV;
+    int threshold = 16;
+    int cur_wait = 1;
+    do {
 
-    while (1) {
-        // Try to send the message
-        int ret = sys_ipc_try_send(to_env, val, srcva, perm);
-        
-        if (ret == 0) {
-            // Successfully sent
-            return;
+        ret = sys_ipc_try_send(to_env, val, pg == NULL ? (void*)-1 : pg, perm);
+        //sys_yield();
+
+        // exponential backoff
+        for (int i=0; i<cur_wait; ++i) {
+            sys_yield();
         }
-        else if (ret != -E_IPC_NOT_RECV) {
-            // Unexpected error
-            panic("ipc_send: unexpected error %e", ret);
+        // update wait value
+        cur_wait <<= 1;
+        if (cur_wait > threshold) {
+            cur_wait = 1;
         }
-        
-        // Receiver not ready yet, yield and try again
-        sys_yield();
+
     }
+    while (ret == -E_IPC_NOT_RECV);
 }
 
 // Find the first environment of the given type.  We'll use this to

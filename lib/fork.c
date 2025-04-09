@@ -1,10 +1,5 @@
 // implement fork from user space
 
-#include "inc/assert.h"
-#include "inc/env.h"
-#include "inc/memlayout.h"
-#include "inc/mmu.h"
-#include "inc/types.h"
 #include <inc/string.h>
 #include <inc/lib.h>
 
@@ -63,7 +58,7 @@ pgfault(struct UTrapframe *utf)
 // the new mapping must be created copy-on-write, and then our mapping must be
 // marked copy-on-write as well.  (Exercise: Why do we need to mark ours
 // copy-on-write again if it was already copy-on-write at the beginning of
-// this function?) "Because the child might spawn another fork which will also need to be copied over"
+// this function?)
 //
 // Returns: 0 on success, < 0 on error.
 // It is also OK to panic on error.
@@ -125,8 +120,7 @@ fork(void)
     envid_t envid = sys_exofork();
 
     if (envid < 0)
-        //panic("fork, sys_exofork %e", envid);
-        return envid;
+        panic("fork, sys_exofork %e", envid);
 
     if (envid == 0) {
         // child

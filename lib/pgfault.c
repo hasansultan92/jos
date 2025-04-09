@@ -4,7 +4,6 @@
 // wrapper in pfentry.S, which in turns calls the registered C
 // function.
 
-#include "inc/env.h"
 #include <inc/lib.h>
 
 
@@ -25,26 +24,19 @@ void (*_pgfault_handler)(struct UTrapframe *utf);
 void
 set_pgfault_handler(void (*handler)(struct UTrapframe *utf))
 {
-	int ret; // holds return values
+	int r;
 
 	if (_pgfault_handler == 0) {
 		// First time through!
 		// LAB 4: Your code here.
-		// panic("set_pgfault_handler not implemented");
-
-		// Allocate an exception stack (one page of memory with its top at UXSTACKTOP)
-		envid_t currentEnvid = sys_getenvid();
-		ret = sys_page_alloc(currentEnvid, (void*)(UXSTACKTOP - PGSIZE), PTE_W | PTE_U | PTE_P);
-		if(ret < 0){
-			panic("set_pgfault_handler: sys_page_alloc failure: %e", ret);
-		}
-
-		// Tell the kernel to call the assembly-language _pgfault_upcall 
-		// routine when a page fault occurs
-		ret = sys_env_set_pgfault_upcall(currentEnvid, _pgfault_upcall);
-		if(ret < 0){
-			panic("set_pgfault_handler: sys_env_set_pgfault_upcall(0, _pgfault_upcall); failure: %e", ret);
-		}
+        cprintf("UXSTACK alloc\n");
+        if (sys_page_alloc(0, (void*)(UXSTACKTOP-PGSIZE), PTE_U | PTE_W | PTE_P) < 0) {
+            panic("Allocation of UXSTACK failed!");
+        }
+        if (sys_env_set_pgfault_upcall(0, _pgfault_upcall) < 0) {
+            panic("sys_env_set_pgfault_upcall failed!");
+        }
+		//panic("set_pgfault_handler not implemented");
 	}
 
 	// Save handler pointer for assembly to call.
