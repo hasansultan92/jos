@@ -1,7 +1,0 @@
-{
-    "recommendations": [
-        "llvm-vs-code-extensions.vscode-clangd",
-        "augustocdias.tasks-shell-input",
-        "ms-vscode.cpptools",
-    ]
-}
