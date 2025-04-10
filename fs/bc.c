@@ -51,7 +51,16 @@ bc_pgfault(struct UTrapframe *utf)
 	// the disk.
 	//
 	// LAB 5: you code here:
+	void * pageRoundedAddy = ROUNDDOWN(addr, PGSIZE); // Does this not need to be block aligned instead?
+	int sysAllocRet = sys_page_alloc(0, pageRoundedAddy, PTE_U | PTE_P | PTE_W);
+	if (sysAllocRet < 0) {
+		panic("error allocating pages at this address");
+	}
 
+    int readRet = ide_read(blockno * BLKSECTS, pageRoundedAddy, BLKSECTS);
+	if (readRet < 0) {
+		panic("issued in block read from ide_read");
+	}
 	// Clear the dirty bit for the disk block page since we just read the
 	// block from disk
 	if ((r = sys_page_map(0, addr, 0, addr, uvpt[PGNUM(addr)] & PTE_SYSCALL)) < 0)
