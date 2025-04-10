@@ -16,4 +16,11 @@ int mon_help(int argc, char **argv, struct Trapframe *tf);
 int mon_kerninfo(int argc, char **argv, struct Trapframe *tf);
 int mon_backtrace(int argc, char **argv, struct Trapframe *tf);
 
+int memdump(int argc, char **argv, struct Trapframe *tf);
+int memmap(int argc, char **argv, struct Trapframe *tf);
+int setPerm(int argc, char ** argv, struct Trapframe *tf);
+int get_permission_flag(const char *perm_str);
+int show(int argc, char **argv, struct Trapframe *tf);
+int clear(int argc, char **argv, struct Trapframe *tf);
+
 #endif	// !JOS_KERN_MONITOR_H

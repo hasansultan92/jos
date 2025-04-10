@@ -1,22 +1,75 @@
-Question 1 (Exercise 2): 
 
-MPBOOTPHYS is used to calculate absolute addresses of the symbols in mpentry.S
-This is needed in mpentry.S because the actual physical loading address of mpentry_start is different from the link address. So instead of relying on linker, we should do this ourselves.
-If we omit this then we will load wrong address in gdt and other places.
+Exercise 2:
+Question 1: Compare kern/mpentry.S side by side with boot/boot.S.
+Bearing in mind that kern/mpentry.S is compiled and linked to
+run above KERNBASE just like everything else in the kernel,
+what is the purpose of macro MPBOOTPHYS? Why is it necessary
+in kern/mpentry.S but not in boot/boot.S? In other words, what
+could go wrong if it were omitted in kern/mpentry.S? Hint: recall
+the differences between the link address and the load address
+that we have discussed in Lab 1.
 
-Question 2 (Exercise 5):
-The big kernel lock avoid concurrency access to global/shared data.
-Having seperate kernel stacks ensures that CPUs are using different stacks and hence separate local variables.
-If we don't use seperate stacks then concurrency issues can occur because of local variables as well and we can never have concurrent execution across multiple CPUs.
+The MPBOOTPHYS macro in kern/mpentry.S translates virtual addresses
+to physical addresses. This is necessary because mpentry.S runs when
+app processers boot in real mode. While mpentry.S is linked to run
+above KERNBASE like the rest of the kernel, it must execute at a low
+physical address when APs boot. mpentry uses MPBOOTPHYS macro to calculate
+absolute addresses of its symbols, rather than relying on the linker
+to fill them (from mpentry.S description).
+Without this macro, the code might contain virtual addresses that
+are inaccessible in real mode, and thus cause crashes. Boot.S doesn't
+need this macro because it's linked and loaded at the same
+low physical address, and so no address translation is needed.
 
+Exercise 5:
+1. It seems that using the big kernel lock guarantees that only one
+CPU can run the kernel code at a time. Why do we still need separate
+kernel stacks for each CPU? Describe a scenario in which using a shared
+kernel stack will go wrong, even with the protection of the big kernel
+lock.
 
-Question 3 (Exercise 6):
-e is on kernel stack and the kernel is mapped to the same virtual address in all environments. 
-Hence switching page tables of different environments still allows access to e.
+Even with a big kernel lock, we need separate kernel stacks because the
+stack is used during the transition into the kernel before the lock can
+be acquired. This transition happens at the hardware level when interrupts
+or exceptions occur.
 
+If CPUs shared a kernel stack, consider this scenario: CPU A is executing
+kernel code with the big kernel lock acquired, while CPU B receives a
+hardware interrupt. The hardware automatically pushes CPU B's register
+state onto the kernel stack before any software-level lock checking can
+occur. This could corrupt CPU A's in-progress kernel stack data during
+this hardware-driven transition phase; thus, causing system crashes.
 
-Question 4 (Exercise 6):
-We will save the trap frame (which includes old values of registers) of old environment to env_tf field of the env structure. We store this in trap function of trap.c.
-To restore an environment, we mimic return from interrupt to the environment using: env_pop_tf which restarts the environment.
+Exercise 6:
+1. Question: In your implementation of env_run() you should have called
+lcr3(). Before and after the call to lcr3(), your code makes references
+(at least it should) to the variable e, the argument to env_run. Upon
+loading the %cr3 register, the addressing context used by the MMU is
+instantly changed. But a virtual address (namely e) has meaning relative
+to a given address context–the address context specifies the physical
+address to which the virtual address maps. Why can the pointer e be
+dereferenced both before and after the addressing switch?
 
+The pointer e can be dereferenced before and after switching
+the addressing context via lcr3() because JOS uses a 2-level page
+directory structure where all  environments share the same
+kernel page directory entries. While each environment has its own
+user-space mappings, the kernel space mappings (above KERNBASE) are
+identical across all environments. Since e is a kernel virtual address
+pointing to an Env structure in kernel memory, its physical address
+mapping remains the same regardless of which environment's pagedir
+is active. This ensures that kernel pointers remain valid even when
+switching between different environments address spaces.
 
+2. Whenever the kernel switches from one environment to another, it must
+ensure the old environment’s registers are saved so they can be restored
+properly later. Why? Where does this happen?
+
+The kernel must save registers when switching from one environment to another
+to preserve each environment's execution state. This allows it to resume
+exactly where it left off when rescheduled. Without this, an environment
+would lose its program counter, stack pointer, etc.
+This saving happens in two places. First when trap/interrupt handlers
+automatically push some registers. And second, in trap.c where remaining
+registers are saved to the environment's trapframe (env_tf field in the
+Env struct).
