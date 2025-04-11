@@ -52,7 +52,7 @@ bc_pgfault(struct UTrapframe *utf)
 	//
 	// LAB 5: you code here:
 	void * pageRoundedAddy = ROUNDDOWN(addr, PGSIZE); // Does this not need to be block aligned instead?
-	int sysAllocRet = sys_page_alloc(0, pageRoundedAddy, PTE_U | PTE_P | PTE_W);
+	int sysAllocRet = sys_page_alloc(0, pageRoundedAddy, PTE_U | PTE_W);
 	if (sysAllocRet < 0) {
 		panic("error allocating pages at this address");
 	}
@@ -89,7 +89,17 @@ flush_block(void *addr)
 		panic("flush_block of bad va %08x", addr);
 
 	// LAB 5: Your code here.
-	panic("flush_block not implemented");
+	if (!va_is_mapped(addr) || !va_is_dirty(addr)) {
+		return;
+	}
+	int roundedAddy = ROUNDDOWN((int )addr, PGSIZE);
+	int returnIDE = ide_write(blockno * BLKSECTS, (void *)roundedAddy, BLKSECTS);
+	if (returnIDE < 0) {
+		panic("Some error in ide_write");
+	}
+	int r;
+	if ((r = sys_page_map(0, addr, 0, addr, uvpt[PGNUM(addr)] & PTE_SYSCALL)) < 0)
+		panic("in bc_pgfault, sys_page_map: %e", r);
 }
 
 // Test that the block cache works, by smashing the superblock and
