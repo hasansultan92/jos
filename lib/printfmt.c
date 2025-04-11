@@ -217,12 +217,6 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 
 		// (unsigned) octal
 		case 'o':
-<<<<<<< HEAD
-			// Replace this with your code.
-			num = getint(&ap, lflag);
-            base = 8;
-            goto number;
-=======
 			// LAB 1: Replace this with your code.
 			num = getint(&ap, lflag);
 			base = 8;
@@ -231,7 +225,6 @@ vprintfmt(void (*putch)(int, void*), void *putdat, const char *fmt, va_list ap)
 			// putch('X', putdat);
 			// putch('X', putdat);
 			break;
->>>>>>> origin/lab5
 
 		// pointer
 		case 'p':
