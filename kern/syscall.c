@@ -152,6 +152,7 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 	// LAB 5: Your code here.
 	// Remember to check whether the user has supplied us with a good
 	// address!
+
 	panic("sys_env_set_trapframe not implemented");
 }
 
@@ -216,38 +217,25 @@ sys_page_alloc(envid_t envid, void *va, int perm)
 	// LAB 4: Your code here.
 
     struct Env *e = NULL;
-
-    if (envid2env(envid, &e, 1) < 0) {
-        return -E_BAD_ENV;
+    int err = envid2env(envid, &e, 1);
+    if (err < 0) {
+        return err;
     }
-
-    if (e == NULL) {
-        return -E_BAD_ENV;
+    else if ((uintptr_t) va >= UTOP || (uintptr_t) va%PGSIZE != 0) {
+        return -E_INVAL;
     }
-
-    if (((uintptr_t)va) >= UTOP) {
+    else if ((perm & ~PTE_SYSCALL) != 0) {
         return -E_INVAL;
     }
 
-    if (!(PTE_U & perm)) {
-        return -E_INVAL;
-    }
-
-    if (!(PTE_P & perm)) {
-        return -E_INVAL;
-    }
-
-    struct PageInfo *pp = page_alloc(ALLOC_ZERO);
-    if (pp == NULL) {
+    struct PageInfo *p = page_alloc(ALLOC_ZERO);
+    if (!p) {
         return -E_NO_MEM;
     }
-
-    if (page_insert(e->env_pgdir, pp, va, perm) != 0) {
-        assert(pp->pp_ref == 0);
-        page_free(pp);
-        return -E_NO_MEM;
+    if ((err = page_insert(e->env_pgdir, p, va, perm|PTE_U|PTE_P)) < 0) {
+        page_free(p);
+        return err;
     }
-
     return 0;
 }
 

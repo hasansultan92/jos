@@ -33,9 +33,7 @@ i386_init(void)
 	// Lab 3 user environment initialization functions
 	env_init();
 	trap_init();
-
 	//sysenter_setup();
-
 
 	// Lab 4 multiprocessor initialization functions
 	mp_init();
