@@ -1,5 +1,8 @@
 /* See COPYRIGHT for copyright information. */
 
+#include "inc/env.h"
+#include "inc/memlayout.h"
+#include "inc/mmu.h"
 #include <inc/x86.h>
 #include <inc/error.h>
 #include <inc/string.h>
@@ -152,8 +155,25 @@ sys_env_set_trapframe(envid_t envid, struct Trapframe *tf)
 	// LAB 5: Your code here.
 	// Remember to check whether the user has supplied us with a good
 	// address!
+    struct Env *e;
+    int returnVal;
+    struct Trapframe tf_mod;
 
-	panic("sys_env_set_trapframe not implemented");
+    if ((returnVal = envid2env(envid, &e, 1)) < 0) {
+        return -E_BAD_ENV;
+    }
+    user_mem_assert(e, tf, sizeof(struct Trapframe), PTE_U); // perm bit for user
+    tf_mod = *tf;
+    tf_mod.tf_cs = GD_UT | 3;
+    tf_mod.tf_ds = GD_UD | 3;
+    tf_mod.tf_es = GD_UD | 3;
+    tf_mod.tf_ss = GD_UD | 3;
+    tf_mod.tf_eflags |= FL_IF; // Enable interrupt
+    tf_mod.tf_eflags &= ~FL_IOPL_MASK; // should be IOPL 0
+
+    e->env_tf = tf_mod;
+    returnVal = 0;
+    return returnVal;
 }
 
 
@@ -558,6 +578,10 @@ syscall(uint32_t syscallno, uint32_t a1, uint32_t a2, uint32_t a3, uint32_t a4, 
     case SYS_ipc_recv:
     {
         return sys_ipc_recv((void*)a1);
+    }
+    case SYS_env_set_trapframe:
+    {
+        return sys_env_set_trapframe((envid_t) a1, (struct Trapframe *) a2);
     }
 
 	default:
