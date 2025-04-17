@@ -310,7 +310,7 @@ copy_shared_pages(envid_t child)
 		if ((uvpd[PDX(pgaddr)] & PTE_P) &&
 			(uvpt[pn] & PTE_P) && // Also I do not think we need this do we?
 			(uvpt[pn] & PTE_SHARE)) {
-				sys_page_map(0, pgaddr, child, pgaddr , uvpt[pn] & PTE_SYSCALL);
+				sys_page_map(0, pgaddr, child,(uintptr_t) pgaddr , uvpt[pn] & PTE_SYSCALL);
 		}
 	}
 	return 0;
