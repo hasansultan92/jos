@@ -1,3 +1,5 @@
+#include "inc/memlayout.h"
+#include "inc/mmu.h"
 #include <inc/lib.h>
 #include <inc/elf.h>
 
@@ -302,6 +304,15 @@ static int
 copy_shared_pages(envid_t child)
 {
 	// LAB 5: Your code here.
+	for (uint32_t pn = 0; pn < (USTACKTOP >> PGSHIFT); ++pn) { 
+		// I copied this from our fork function, this might be a little different
+		uintptr_t pgaddr = pn << PGSHIFT;
+		if ((uvpd[PDX(pgaddr)] & PTE_P) &&
+			(uvpt[pn] & PTE_P) && // Also I do not think we need this do we?
+			(uvpt[pn] & PTE_SHARE)) {
+				sys_page_map(0, pgaddr, child, pgaddr , uvpt[pn] & PTE_SYSCALL);
+		}
+	}
 	return 0;
 }
 

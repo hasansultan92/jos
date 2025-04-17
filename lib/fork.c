@@ -69,13 +69,27 @@ duppage(envid_t envid, unsigned pn)
 	int r;
 
 	// LAB 4: Your code here.
-    int perm = PTE_U | PTE_P;
+    // ********************************
+    // @hasansultan92: Changes for Lab5
+    void *addr = (void *)(pn << PGSHIFT);
     pte_t pte = uvpt[pn];
+
+    if (pte & PTE_SHARE) {
+        // Copy shared page directly with original permissions
+        if ((r = sys_page_map(0, addr, envid, addr, pte & PTE_SYSCALL)) < 0) {
+            panic("sys_page_map shared failed %e\n", r);
+        }
+        return 0;
+    }
+    // End of changes for Lab5
+    // ********************************
+
+
+    int perm = PTE_U | PTE_P;
     if ( (pte & PTE_W) || (pte & PTE_COW) ) {
         perm |= PTE_COW;
     }
 
-    void *addr = (void *)(pn << PGSHIFT);
 
     if ((r = sys_page_map(0, addr, envid, addr, perm)) < 0) {
         panic("sys_page_map others failed %e\n", r);
