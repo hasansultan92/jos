@@ -438,11 +438,10 @@ sys_ipc_try_send(envid_t envid, uint32_t value, void *srcva, unsigned perm)
         if (va & 0xfff) {
             return -E_INVAL;
         }
-
-        uint32_t perm_check = ~(PTE_U | PTE_P | PTE_W);
-        if (perm & perm_check) {
-            return -E_INVAL;
-        }
+        uint32_t valid = PTE_U | PTE_P | PTE_W | PTE_AVAIL | 0x400;
+        if ((perm & (PTE_U | PTE_P)) != (PTE_U | PTE_P)) return -E_INVAL;
+        if (perm & ~valid) return -E_INVAL;
+        
 
         // get pte
         pp = page_lookup(curenv->env_pgdir, srcva, &pte);
