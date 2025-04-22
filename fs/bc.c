@@ -36,10 +36,16 @@ bc_pgfault(struct UTrapframe *utf)
 	uint32_t blockno = ((uint32_t)addr - DISKMAP) / BLKSIZE;
 	int r;
 
+	// cprintf("\nDISKMAP: %08x, DISKSIZE: %08x\n", (void*)DISKMAP, (void*)(DISKMAP + DISKSIZE));
+	// cprintf("\n addr< DISKMAP: %d\n", (addr < (void*)DISKMAP));
+	// cprintf("\n addr >= DISKMAP: %d\n", (addr >= (void*)DISKMAP + DISKSIZE));
+
 	// Check that the fault was within the block cache region
-	if (addr < (void*)DISKMAP || addr >= (void*)(DISKMAP + DISKSIZE))
-		panic("page fault in FS: eip %08x, va %08x, err %04x",
-		      utf->utf_eip, addr, utf->utf_err);
+	// PAGEFAULTS HERE
+	if (addr < (void*)DISKMAP || addr >= (void*)(DISKMAP + DISKSIZE)){
+		// TO DO DELETE THESE LOINES
+		panic("page fault in FS: eip %08x, va %08x, err %04x",utf->utf_eip, addr, utf->utf_err);
+	}
 
 	// Sanity check the block number.
 	if (super && blockno >= super->s_nblocks)
@@ -71,6 +77,7 @@ bc_pgfault(struct UTrapframe *utf)
 	// in?)
 	if (bitmap && block_is_free(blockno))
 		panic("reading free block %08x\n", blockno);
+
 }
 
 // Flush the contents of the block containing VA out to disk if

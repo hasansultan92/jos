@@ -175,9 +175,13 @@ file_block_walk(struct File *f, uint32_t filebno, uint32_t **ppdiskbno, bool all
 			// Clear new allocated block
 			uint32_t *indirect_block = (uint32_t*)diskaddr(blockno);
 			memset(indirect_block, 0, BLKSIZE);
+			*ppdiskbno = &indirect_block[filebno - NDIRECT];
 
 			// Mark block as dirty
 			flush_block(indirect_block);
+		}else{
+			uint32_t *indirect_block = (uint32_t*)diskaddr(f->f_indirect);
+			*ppdiskbno = &indirect_block[filebno - NDIRECT];
 		}
 	}
 	return 0;
@@ -201,7 +205,7 @@ file_get_block(struct File *f, uint32_t filebno, char **blk)
 	// Get a pointer to the disk block # slot
 	uint32_t *pdiskbno;
 	int r = file_block_walk(f, filebno, &pdiskbno, 1);
-	if(r < 0){
+	if(r != 0){
 		return r;
 	}
 
