@@ -155,7 +155,7 @@ devfile_write(struct Fd *fd, const void *buf, size_t n)
 		// Error has occured
 		return returnVal;
 	}
-	fd->fd_offset += returnVal;
+	// fd->fd_offset += returnVal;
 	return returnVal;
 }
 
