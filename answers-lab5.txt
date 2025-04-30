@@ -4,7 +4,8 @@ Question 1. Do you have to do anything else to ensure that this I/O privilege
 setting is saved and restored properly when you subsequently switch from one 
 environment to another? Why?
 
-No, we do not have to do anything else to ensure that this I/O privelege
-setting is saved and restored properly. This is because the IO privelege is 
-stored in the eflags register--so it will be automatically restored and 
-restored when subsequently switching from one environment to another.
+No, we do not have to do anything else to ensure that this I/O privilege
+setting is saved and restored properly. This is because IO privilege is 
+stored in the eflags register (tf_eflags), which is part of the trap frame 
+(env_tf)--which will be automatically be saved and restored when switching 
+from one environment to another.
