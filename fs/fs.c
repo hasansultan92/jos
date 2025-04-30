@@ -204,9 +204,9 @@ file_get_block(struct File *f, uint32_t filebno, char **blk)
 	
 	// Get a pointer to the disk block # slot
 	uint32_t *pdiskbno;
-	int r = file_block_walk(f, filebno, &pdiskbno, 1);
-	if(r != 0){
-		return r;
+	int fbw_ret = file_block_walk(f, filebno, &pdiskbno, 1);
+	if(fbw_ret != 0){
+		return fbw_ret;
 	}
 
 	// Check if block exists
